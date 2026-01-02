@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String
+  name         String?
+  phoneNumber  String?
+  role         String        @default("USER") // USER, ADMIN
+  credits      Int           @default(10) // Başlangıç kredisi
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  cvs          CV[]
+  cvanalyses   CVAnalysis[]
+  chatSessions ChatSession[]
+  subscription Subscription?
+  usageRecords UsageRecord[]
+  adminLogs    AdminLog[] // Admin tarafından yapılan işlemler
+  salesRecords SalesRecord[] // Satış kayıtları
+}
+
+// Admin işlem logları - Tüm admin aksiyonlarını takip eder
+model AdminLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String // CREATE, UPDATE, DELETE, APPROVE, REJECT, LOGIN, etc.
+  targetType String // USER, SUBSCRIPTION, JOB, SYSTEM, etc.
+  targetId   String? // İşlem yapılan kaydın ID'si
+  details    String? // JSON formatında detaylar
+  ipAddress  String? // İşlem yapan IP adresi
+  userAgent  String? // Tarayıcı bilgisi
+  createdAt  DateTime @default(now())
+  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([action])
+  @@index([targetType])
+  @@index([createdAt])
+}
+
+// Satış kayıtları - Abonelik satışlarını takip eder
+model SalesRecord {
+  id             String   @id @default(cuid())
+  orderNumber    String   @unique // Benzersiz sipariş numarası: KK-XXXXXX
+  userId         String
+  subscriptionId String?
+  plan           String // BASIC, PREMIUM
+  amount         Float // Satış tutarı
+  currency       String   @default("TRY")
+  paymentMethod  String? // HAVALE, KREDI_KARTI, etc.
+  status         String   @default("COMPLETED") // PENDING, COMPLETED, CANCELLED, REFUNDED
+  notes          String? // Admin notları
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([orderNumber])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Subscription {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  plan      String    @default("FREE")
+  status    String    @default("PENDING")
+  orderCode String?   @unique
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CV {
+  id             String       @id @default(cuid())
+  userId         String
+  title          String
+  data           String
+  template       String       @default("modern")
+  pdfPath        String? // PDF dosya yolu
+  pdfGeneratedAt DateTime? // PDF oluşturma tarihi
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses       CVAnalysis[]
+}
+
+// Site ayarları - admin tarafından düzenlenebilir
+model SiteSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique // örn: subscription_plans, site_info
+  value     String // JSON formatında değer
+  updatedBy String? // Son güncelleyen admin ID
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UsageRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  count     Int      @default(1)
+  month     Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, month])
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  userId    String
+  messages  String
+  cvId      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model JobListing {
+  id             String       @id @default(cuid())
+  title          String
+  company        String
+  location       String?
+  description    String
+  requirements   String?
+  type           String       @default("PRIVATE")
+  sourceUrl      String?
+  applicationUrl String? // Başvuru linki
+  salary         String? // Maaş bilgisi
+  deadline       DateTime? // Son başvuru tarihi
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  analyses       CVAnalysis[]
+}
+
+model CVAnalysis {
+  id        String     @id @default(cuid())
+  userId    String
+  cvId      String
+  jobId     String
+  score     Int
+  feedback  String
+  createdAt DateTime   @default(now())
+  job       JobListing @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  cv        CV         @relation(fields: [cvId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
