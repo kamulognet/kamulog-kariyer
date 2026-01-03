@@ -13,7 +13,9 @@ import {
     ShoppingCart,
     Home,
     Settings,
-    Sparkles
+    Sparkles,
+    Wallet,
+    Globe
 } from 'lucide-react'
 
 const navItems = [
@@ -22,9 +24,12 @@ const navItems = [
     { href: '/yonetim/subscriptions', label: 'Abonelikler', icon: CreditCard },
     { href: '/yonetim/jobs', label: 'İş İlanları', icon: Briefcase },
     { href: '/yonetim/sales', label: 'Satış Kayıtları', icon: ShoppingCart },
+    { href: '/yonetim/payment-settings', label: 'Ödeme Ayarları', icon: Wallet },
+    { href: '/yonetim/pages', label: 'Sayfa İçerikleri', icon: Globe },
     { href: '/yonetim/logs', label: 'Sistem Logları', icon: FileText },
     { href: '/yonetim/settings', label: 'Ayarlar', icon: Settings },
 ]
+
 
 export default function YonetimLayout({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession()
