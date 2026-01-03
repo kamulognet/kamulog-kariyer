@@ -14,8 +14,12 @@ import {
     RefreshCw,
     Calendar,
     User,
-    CreditCard
+    CreditCard,
+    CheckSquare,
+    Square,
+    AlertTriangle
 } from 'lucide-react'
+import { showSuccess, showError, showWarning } from '@/components/ToastProvider'
 
 interface SalesRecord {
     id: string
@@ -74,6 +78,12 @@ export default function AdminSalesPage() {
     // Modals
     const [showCreateModal, setShowCreateModal] = useState(false)
     const [selectedSale, setSelectedSale] = useState<SalesRecord | null>(null)
+
+    // Bulk selection
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const [showBulkConfirm, setShowBulkConfirm] = useState(false)
+    const [bulkAction, setBulkAction] = useState<'delete' | 'status' | null>(null)
+    const [bulkStatus, setBulkStatus] = useState('COMPLETED')
 
     // Create form
     const [createForm, setCreateForm] = useState({
@@ -209,13 +219,79 @@ export default function AdminSalesPage() {
             })
 
             if (res.ok) {
+                showSuccess('Satış kaydı silindi')
                 loadSales()
             } else {
                 const data = await res.json()
-                alert(data.error || 'Silme başarısız')
+                showError(data.error || 'Silme başarısız')
             }
         } catch (error) {
             console.error('Error deleting sale:', error)
+            showError('Bir hata oluştu')
+        }
+    }
+
+    // Bulk selection helpers
+    const toggleSelect = (id: string) => {
+        const newSet = new Set(selectedIds)
+        if (newSet.has(id)) {
+            newSet.delete(id)
+        } else {
+            newSet.add(id)
+        }
+        setSelectedIds(newSet)
+    }
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === sales.length) {
+            setSelectedIds(new Set())
+        } else {
+            setSelectedIds(new Set(sales.map(s => s.id)))
+        }
+    }
+
+    const handleBulkAction = async () => {
+        if (selectedIds.size === 0) return
+
+        try {
+            const ids = Array.from(selectedIds)
+
+            if (bulkAction === 'delete') {
+                const res = await fetch('/api/admin/sales', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'bulk_delete', ids })
+                })
+                if (res.ok) {
+                    showSuccess(`${ids.length} kayıt silindi`)
+                    setSelectedIds(new Set())
+                    loadSales()
+                } else {
+                    showError('Toplu silme başarısız')
+                }
+            } else if (bulkAction === 'status') {
+                const res = await fetch('/api/admin/sales', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'bulk_status', ids, status: bulkStatus })
+                })
+                if (res.ok) {
+                    showSuccess(`${ids.length} kayıt güncellendi`)
+                    if (bulkStatus === 'COMPLETED') {
+                        showSuccess('Abonelikler aktifleştirildi!')
+                    }
+                    setSelectedIds(new Set())
+                    loadSales()
+                } else {
+                    showError('Toplu güncelleme başarısız')
+                }
+            }
+        } catch (error) {
+            console.error('Bulk action error:', error)
+            showError('Bir hata oluştu')
+        } finally {
+            setShowBulkConfirm(false)
+            setBulkAction(null)
         }
     }
 
@@ -350,12 +426,92 @@ export default function AdminSalesPage() {
                 </div>
             </div>
 
+            {/* Bulk Action Bar */}
+            {selectedIds.size > 0 && (
+                <div className="bg-purple-900/30 border border-purple-500/30 rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <CheckSquare className="w-5 h-5 text-purple-400" />
+                        <span className="text-white font-medium">{selectedIds.size} kayıt seçildi</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <select
+                            value={bulkStatus}
+                            onChange={(e) => setBulkStatus(e.target.value)}
+                            className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
+                        >
+                            <option value="COMPLETED">Tamamlandı</option>
+                            <option value="PENDING">Bekliyor</option>
+                            <option value="CANCELLED">İptal</option>
+                        </select>
+                        <button
+                            onClick={() => { setBulkAction('status'); setShowBulkConfirm(true) }}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium transition"
+                        >
+                            Durum Güncelle
+                        </button>
+                        <button
+                            onClick={() => { setBulkAction('delete'); setShowBulkConfirm(true) }}
+                            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition flex items-center gap-2"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Toplu Sil
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Confirm Modal */}
+            {showBulkConfirm && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 max-w-md w-full mx-4">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+                                <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                            </div>
+                            <h3 className="text-lg font-bold text-white">Emin misiniz?</h3>
+                        </div>
+                        <p className="text-slate-400 mb-6">
+                            {bulkAction === 'delete'
+                                ? `${selectedIds.size} kayıt kalıcı olarak silinecek.`
+                                : `${selectedIds.size} kaydın durumu "${bulkStatus}" olarak güncellenecek${bulkStatus === 'COMPLETED' ? ' ve abonelikler aktifleştirilecek' : ''}.`
+                            }
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => { setShowBulkConfirm(false); setBulkAction(null) }}
+                                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={handleBulkAction}
+                                className={`px-4 py-2 rounded-lg transition font-medium ${bulkAction === 'delete'
+                                    ? 'bg-red-600 hover:bg-red-500 text-white'
+                                    : 'bg-green-600 hover:bg-green-500 text-white'
+                                    }`}
+                            >
+                                {bulkAction === 'delete' ? 'Sil' : 'Güncelle'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Sales Table */}
             <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-slate-900/50">
                             <tr>
+                                <th className="px-4 py-4 text-left">
+                                    <button onClick={toggleSelectAll} className="text-slate-400 hover:text-white transition">
+                                        {selectedIds.size === sales.length && sales.length > 0 ? (
+                                            <CheckSquare className="w-5 h-5 text-purple-400" />
+                                        ) : (
+                                            <Square className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </th>
                                 <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">Sipariş No</th>
                                 <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">Kullanıcı</th>
                                 <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">Plan</th>
@@ -369,19 +525,28 @@ export default function AdminSalesPage() {
                         <tbody className="divide-y divide-slate-700">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
+                                    <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
                                         Yükleniyor...
                                     </td>
                                 </tr>
                             ) : sales.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
+                                    <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
                                         Satış kaydı bulunamadı
                                     </td>
                                 </tr>
                             ) : (
                                 sales.map((sale) => (
-                                    <tr key={sale.id} className="hover:bg-slate-700/30 transition">
+                                    <tr key={sale.id} className={`hover:bg-slate-700/30 transition ${selectedIds.has(sale.id) ? 'bg-purple-900/20' : ''}`}>
+                                        <td className="px-4 py-4">
+                                            <button onClick={() => toggleSelect(sale.id)} className="text-slate-400 hover:text-white transition">
+                                                {selectedIds.has(sale.id) ? (
+                                                    <CheckSquare className="w-5 h-5 text-purple-400" />
+                                                ) : (
+                                                    <Square className="w-5 h-5" />
+                                                )}
+                                            </button>
+                                        </td>
                                         <td className="px-6 py-4">
                                             <span className="font-mono font-bold text-purple-400">
                                                 {sale.orderNumber}

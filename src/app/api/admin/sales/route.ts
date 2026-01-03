@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// PUT - Satış kaydını güncelle
+// PUT - Satış kaydını güncelle (durum COMPLETED olursa abonelik aktifleştir)
 export async function PUT(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions)
@@ -221,7 +221,73 @@ export async function PUT(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { id, status, notes } = body
+        const { id, ids, status, notes, action } = body
+
+        // Toplu işlem
+        if (action === 'bulk_delete' && ids && Array.isArray(ids)) {
+            await prisma.salesRecord.deleteMany({
+                where: { id: { in: ids } }
+            })
+            await prisma.adminLog.create({
+                data: {
+                    adminId: session.user.id,
+                    action: 'BULK_DELETE',
+                    targetType: 'SALES',
+                    targetId: 'multiple',
+                    details: JSON.stringify({ count: ids.length, ids }),
+                }
+            })
+            return NextResponse.json({ success: true, deletedCount: ids.length })
+        }
+
+        if (action === 'bulk_status' && ids && Array.isArray(ids) && status) {
+            // Toplu durum güncelleme
+            const salesRecords = await prisma.salesRecord.findMany({
+                where: { id: { in: ids } }
+            })
+
+            // Her bir kayıt için abonelik aktivasyonu
+            for (const saleRecord of salesRecords) {
+                if (status === 'COMPLETED' && saleRecord.status !== 'COMPLETED') {
+                    await activateSubscription(saleRecord.userId, saleRecord.plan, saleRecord.orderNumber)
+                }
+            }
+
+            await prisma.salesRecord.updateMany({
+                where: { id: { in: ids } },
+                data: { status }
+            })
+
+            await prisma.adminLog.create({
+                data: {
+                    adminId: session.user.id,
+                    action: 'BULK_UPDATE',
+                    targetType: 'SALES',
+                    targetId: 'multiple',
+                    details: JSON.stringify({ count: ids.length, status }),
+                }
+            })
+            return NextResponse.json({ success: true, updatedCount: ids.length })
+        }
+
+        // Tekil güncelleme
+        if (!id) {
+            return NextResponse.json({ error: 'ID gerekli' }, { status: 400 })
+        }
+
+        // Mevcut kaydı bul
+        const existingSale = await prisma.salesRecord.findUnique({
+            where: { id }
+        })
+
+        if (!existingSale) {
+            return NextResponse.json({ error: 'Kayıt bulunamadı' }, { status: 404 })
+        }
+
+        // Eğer durum COMPLETED'a değişiyorsa ve önceden COMPLETED değilse
+        if (status === 'COMPLETED' && existingSale.status !== 'COMPLETED') {
+            await activateSubscription(existingSale.userId, existingSale.plan, existingSale.orderNumber)
+        }
 
         const sale = await prisma.salesRecord.update({
             where: { id },
@@ -247,6 +313,53 @@ export async function PUT(request: NextRequest) {
         console.error('Error updating sale:', error)
         return NextResponse.json({ error: 'Satış kaydı güncellenirken hata oluştu' }, { status: 500 })
     }
+}
+
+// Abonelik aktivasyon yardımcı fonksiyonu
+async function activateSubscription(userId: string, plan: string, orderNumber: string) {
+    // 1. Abonelik oluştur veya güncelle
+    const expiresAt = new Date()
+    expiresAt.setMonth(expiresAt.getMonth() + 1) // 1 ay geçerlilik
+
+    const existingSubscription = await prisma.subscription.findFirst({
+        where: { userId }
+    })
+
+    if (existingSubscription) {
+        await prisma.subscription.update({
+            where: { id: existingSubscription.id },
+            data: {
+                plan,
+                status: 'ACTIVE',
+                expiresAt,
+                orderCode: orderNumber,
+            }
+        })
+    } else {
+        await prisma.subscription.create({
+            data: {
+                userId,
+                plan,
+                status: 'ACTIVE',
+                expiresAt,
+                orderCode: orderNumber,
+            }
+        })
+    }
+
+    // 2. Kredileri güncelle
+    let creditAmount = 0
+    if (plan === 'BASIC') creditAmount = 50
+    if (plan === 'PREMIUM') creditAmount = 1000
+
+    if (creditAmount > 0) {
+        await prisma.user.update({
+            where: { id: userId },
+            data: { credits: { increment: creditAmount } }
+        })
+    }
+
+    console.log(`[Sales API] Subscription activated for user ${userId}, plan: ${plan}, credits: ${creditAmount}`)
 }
 
 // DELETE - Satış kaydını sil

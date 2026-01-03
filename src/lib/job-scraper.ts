@@ -329,25 +329,22 @@ export function generateSampleJobs(count: number = 50): ScrapedJob[] {
     const publicCount = Math.ceil(count / 2)
     const privateCount = count - publicCount
 
-    // Kamu kaynakları
-    const publicSources = [
-        { url: 'https://kariyerkapisi.gov.tr/', name: 'Kariyer Kapısı' },
-        { url: 'https://www.ilan.gov.tr/ilan/kategori/8/kamu-akademik-personel', name: 'İlan.gov.tr' },
-        { url: 'https://esube.iskur.gov.tr/', name: 'İŞKUR' },
-    ]
+    // Kamu için varsayılan kaynak
+    const defaultPublicSource = 'https://kariyerkapisi.gov.tr/'
 
-    // Özel sektör kaynakları
+    // Özel sektör kaynakları - gerçek anasayfa ve ilan linkleri
     const privateSources = [
-        { url: 'https://www.kariyer.net/is-ilanlari', name: 'Kariyer.net' },
-        { url: 'https://www.yenibiris.com/is-ilanlari', name: 'Yenibiris' },
-        { url: 'https://www.indeed.com.tr/', name: 'Indeed' },
+        { url: 'https://www.kariyer.net/', name: 'Kariyer.net' },
+        { url: 'https://www.yenibiris.com/', name: 'Yenibiris' },
+        { url: 'https://tr.indeed.com/', name: 'Indeed' },
         { url: 'https://www.linkedin.com/jobs/', name: 'LinkedIn' },
+        { url: 'https://www.secretcv.com/', name: 'SecretCV' },
+        { url: 'https://www.monster.com.tr/', name: 'Monster' },
     ]
 
     // Kamu ilanları
     for (let i = 0; i < publicCount; i++) {
         const template = getRandomElement(publicJobTemplates)
-        const source = publicSources[i % publicSources.length]
 
         // Son başvuru tarihi (7-60 gün arası rastgele)
         const deadline = new Date()
@@ -360,8 +357,8 @@ export function generateSampleJobs(count: number = 50): ScrapedJob[] {
             description: getRandomElement(template.descriptions),
             requirements: generateRequirements(template.title),
             type: 'PUBLIC',
-            sourceUrl: source.url,
-            applicationUrl: source.url,
+            sourceUrl: defaultPublicSource,
+            applicationUrl: defaultPublicSource,
             salary: undefined,
             deadline: deadline.toISOString().split('T')[0]
         })
