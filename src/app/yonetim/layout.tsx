@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-    { href: '/yonetim', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/yonetim', label: 'Anasayfa', icon: LayoutDashboard },
     { href: '/yonetim/users', label: 'Kullanıcılar', icon: Users },
     { href: '/yonetim/subscriptions', label: 'Abonelikler', icon: CreditCard },
     { href: '/yonetim/jobs', label: 'İş İlanları', icon: Briefcase },

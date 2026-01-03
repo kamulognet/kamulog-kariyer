@@ -222,7 +222,7 @@ export default function CVBuilderPage() {
                     <div className="flex justify-between items-center h-16">
                         <div className="flex items-center gap-4">
                             <Link href="/dashboard" className="text-slate-400 hover:text-white transition">
-                                ← Dashboard
+                                ← Anasayfa
                             </Link>
                             <h1 className="text-xl font-bold text-white">AI CV Oluşturucu</h1>
                         </div>

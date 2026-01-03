@@ -56,7 +56,7 @@ export default function AdminDashboard() {
         <div className="space-y-8">
             {/* Page Header */}
             <div>
-                <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+                <h1 className="text-2xl font-bold text-white">Anasayfa</h1>
                 <p className="text-slate-400">Genel bakış ve istatistikler</p>
             </div>
 

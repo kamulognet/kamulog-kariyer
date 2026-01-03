@@ -76,7 +76,7 @@ export default function Home() {
                 href="/dashboard"
                 className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold rounded-2xl transition backdrop-blur-sm"
               >
-                Dashboard&apos;a Git
+                Panelime Git
               </Link>
             </div>
 

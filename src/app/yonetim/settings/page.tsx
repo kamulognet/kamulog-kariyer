@@ -115,7 +115,7 @@ export default function AdminSettingsPage() {
                             <h1 className="text-xl font-bold text-white">Admin Panel</h1>
                             <nav className="flex gap-4">
                                 <Link href="/admin" className="text-slate-400 hover:text-white transition">
-                                    Dashboard
+                                    Anasayfa
                                 </Link>
                                 <Link href="/admin/users" className="text-slate-400 hover:text-white transition">
                                     Kullanıcılar
@@ -144,8 +144,8 @@ export default function AdminSettingsPage() {
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {message && (
                     <div className={`mb-6 p-4 rounded-lg ${message.type === 'success'
-                            ? 'bg-green-500/20 border border-green-500/50 text-green-200'
-                            : 'bg-red-500/20 border border-red-500/50 text-red-200'
+                        ? 'bg-green-500/20 border border-green-500/50 text-green-200'
+                        : 'bg-red-500/20 border border-red-500/50 text-red-200'
                         }`}>
                         {message.text}
                     </div>

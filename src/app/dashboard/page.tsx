@@ -65,7 +65,7 @@ export default function DashboardPage() {
                             <Link href="/" className="text-xl font-bold text-white">KARİYER KAMULOG</Link>
                             <nav className="flex gap-4">
                                 <Link href="/dashboard" className="text-blue-400 font-medium">
-                                    Dashboard
+                                    Anasayfa
                                 </Link>
                                 <Link href="/dashboard/cv-builder" className="text-slate-400 hover:text-white transition">
                                     CV Oluştur

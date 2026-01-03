@@ -115,7 +115,7 @@ function SubscriptionsContent() {
                             <h1 className="text-xl font-bold text-white">Admin Panel</h1>
                             <nav className="flex gap-4">
                                 <Link href="/admin" className="text-slate-400 hover:text-white transition">
-                                    Dashboard
+                                    Anasayfa
                                 </Link>
                                 <Link href="/admin/users" className="text-slate-400 hover:text-white transition">
                                     Kullanıcılar
@@ -204,17 +204,17 @@ function SubscriptionsContent() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2 py-1 text-xs font-medium rounded ${sub.plan === 'PREMIUM' ? 'bg-purple-500/20 text-purple-400' :
-                                                    sub.plan === 'BASIC' ? 'bg-blue-500/20 text-blue-400' :
-                                                        'bg-slate-500/20 text-slate-400'
+                                                sub.plan === 'BASIC' ? 'bg-blue-500/20 text-blue-400' :
+                                                    'bg-slate-500/20 text-slate-400'
                                                 }`}>
                                                 {sub.plan}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2 py-1 text-xs font-medium rounded ${sub.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
-                                                    sub.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                        sub.status === 'EXPIRED' ? 'bg-red-500/20 text-red-400' :
-                                                            'bg-slate-500/20 text-slate-400'
+                                                sub.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                    sub.status === 'EXPIRED' ? 'bg-red-500/20 text-red-400' :
+                                                        'bg-slate-500/20 text-slate-400'
                                                 }`}>
                                                 {sub.status}
                                             </span>
