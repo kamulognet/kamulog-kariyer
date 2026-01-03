@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { Check, Zap, Star, Crown, Shield } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import PanelHeader from '@/components/PanelHeader'
+import Link from 'next/link'
 
 interface Plan {
     id: string
@@ -28,7 +30,7 @@ const colorMap: Record<string, string> = {
 
 export default function SubscriptionPage() {
     const { data: session } = useSession()
-    const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+    const router = useRouter()
     const [plans, setPlans] = useState<Plan[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -53,6 +55,12 @@ export default function SubscriptionPage() {
             console.error('Error loading plans:', error)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleUpgrade = (plan: Plan) => {
+        if (plan.price > 0) {
+            router.push('/panel/satin-al')
         }
     }
 
@@ -114,17 +122,24 @@ export default function SubscriptionPage() {
                                     <span className="text-4xl font-bold text-white">{priceDisplay}</span>
                                 </div>
 
-                                <button
-                                    onClick={() => setSelectedPlan(plan.id)}
-                                    className={`w-full py-3 px-6 rounded-xl font-bold transition-all ${plan.id === 'FREE'
-                                        ? 'bg-slate-700 hover:bg-slate-600 text-white'
-                                        : color === 'purple'
+                                {plan.price === 0 ? (
+                                    <button
+                                        disabled
+                                        className="w-full py-3 px-6 rounded-xl font-bold bg-slate-700 text-slate-400 cursor-not-allowed"
+                                    >
+                                        Mevcut Plan
+                                    </button>
+                                ) : (
+                                    <Link
+                                        href="/panel/satin-al"
+                                        className={`w-full py-3 px-6 rounded-xl font-bold transition-all block text-center ${color === 'purple'
                                             ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/20'
                                             : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white shadow-lg shadow-orange-900/20'
-                                        }`}
-                                >
-                                    {plan.id === 'FREE' ? 'Mevcut Plan' : 'Yükselt'}
-                                </button>
+                                            }`}
+                                    >
+                                        Yükselt
+                                    </Link>
+                                )}
 
                                 <div className="mt-8 space-y-4">
                                     {plan.features.map((feature, idx) => (
