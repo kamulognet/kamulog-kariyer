@@ -143,7 +143,7 @@ export default function AdminJobsPage() {
             const res = await fetch('/api/admin/jobs/fetch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ count: 10, source: 'iskur' })
+                body: JSON.stringify({ count: 50, source: 'iskur' })
             })
             const data = await res.json()
             if (res.ok) {
@@ -192,6 +192,28 @@ export default function AdminJobsPage() {
                         <Plus className="w-4 h-4" />
                         Yeni İlan Ekle
                     </button>
+                </div>
+            </div>
+
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5">
+                    <div className="text-blue-200 text-sm">Toplam İlan</div>
+                    <div className="text-3xl font-bold text-white mt-1">{jobs.length}</div>
+                </div>
+                <div className="bg-gradient-to-br from-orange-600 to-orange-700 rounded-2xl p-5">
+                    <div className="text-orange-200 text-sm">Kamu İlanları</div>
+                    <div className="text-3xl font-bold text-white mt-1">{jobs.filter(j => j.type === 'PUBLIC').length}</div>
+                </div>
+                <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-5">
+                    <div className="text-purple-200 text-sm">Özel Sektör</div>
+                    <div className="text-3xl font-bold text-white mt-1">{jobs.filter(j => j.type === 'PRIVATE').length}</div>
+                </div>
+                <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-5">
+                    <div className="text-green-200 text-sm">Bu Ay Eklenen</div>
+                    <div className="text-3xl font-bold text-white mt-1">
+                        {jobs.filter(j => new Date(j.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length}
+                    </div>
                 </div>
             </div>
 
