@@ -549,7 +549,7 @@ export default function AdminSalesPage() {
                                     <input
                                         type="number"
                                         value={createForm.amount}
-                                        onChange={(e) => setCreateForm({ ...createForm, amount: e.target.value })}
+                                        onChange={(e) => setCreateForm({ ...createForm, amount: Number(e.target.value) || 0 })}
                                         className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
                                         placeholder="0"
                                     />
