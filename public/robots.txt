@@ -1,0 +1,24 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /yonetim/
+Disallow: /panel/cv/
+Disallow: /_next/
+
+# Sitemaps
+Sitemap: https://kariyerkamulog.com/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
+
+# Google specific
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /yonetim/
+
+# Bing specific  
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /yonetim/

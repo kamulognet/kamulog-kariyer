@@ -4,10 +4,14 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 const defaultContent = {
-    about: 'Kariyer Kamulog, yapay zeka destekli CV oluşturma ve iş eşleştirme platformudur.',
+    about: 'Kariyer Kamulog, yapay zeka destekli CV oluşturma ve iş eşleştirme platformudur. Kamu ve özel sektör iş ilanlarını takip edin, AI ile CV\'nizi oluşturun ve kariyer hedeflerinize ulaşın.',
     contact: 'E-posta: info@kariyerkamulog.com\nTelefon: +90 555 123 4567',
     privacy: 'Gizlilik politikası...',
-    terms: 'Kullanım şartları...'
+    terms: 'Kullanım şartları...',
+    mapEmbed: '',
+    address: '',
+    phone: '',
+    email: ''
 }
 
 // GET - Sayfa içeriklerini getir (public)
@@ -21,7 +25,7 @@ export async function GET() {
             const content = typeof setting.value === 'string'
                 ? JSON.parse(setting.value)
                 : setting.value
-            return NextResponse.json(content)
+            return NextResponse.json({ ...defaultContent, ...content })
         }
 
         return NextResponse.json(defaultContent)
@@ -40,13 +44,17 @@ export async function PUT(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { about, contact, privacy, terms } = body
+        const { about, contact, privacy, terms, mapEmbed, address, phone, email } = body
 
         const content = {
             about: about || defaultContent.about,
             contact: contact || defaultContent.contact,
             privacy: privacy || defaultContent.privacy,
-            terms: terms || defaultContent.terms
+            terms: terms || defaultContent.terms,
+            mapEmbed: mapEmbed || '',
+            address: address || '',
+            phone: phone || '',
+            email: email || ''
         }
 
         await prisma.siteSettings.upsert({
