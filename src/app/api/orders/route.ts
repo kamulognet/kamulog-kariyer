@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendOrderConfirmationEmail } from '@/lib/email'
 
 // Sipariş numarası oluştur
 function generateOrderNumber() {
@@ -19,9 +20,9 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { plan, amount } = body
+        const { plan, amount, planName } = body
 
-        console.log('Order request:', { plan, amount, userId: session.user.id })
+        console.log('Order request:', { plan, amount, planName, userId: session.user.id })
 
         if (!plan) {
             return NextResponse.json({ error: 'Plan gerekli' }, { status: 400 })
@@ -52,6 +53,35 @@ export async function POST(request: NextRequest) {
             where: { id: session.user.id },
             select: { name: true, email: true, phoneNumber: true, address: true, city: true, district: true }
         })
+
+        // Ödeme bilgilerini al
+        let paymentInfo = null
+        try {
+            const paymentSetting = await prisma.siteSettings.findUnique({
+                where: { key: 'payment_info' }
+            })
+            if (paymentSetting?.value) {
+                paymentInfo = typeof paymentSetting.value === 'string'
+                    ? JSON.parse(paymentSetting.value)
+                    : paymentSetting.value
+            }
+        } catch (e) {
+            console.error('Error loading payment info:', e)
+        }
+
+        // Email gönder
+        if (user?.email) {
+            await sendOrderConfirmationEmail({
+                orderCode: orderNumber,
+                planName: planName || plan,
+                amount: Number(amount),
+                userName: user.name || 'Değerli Müşterimiz',
+                userEmail: user.email,
+                bankName: paymentInfo?.bankName,
+                iban: paymentInfo?.iban,
+                companyName: paymentInfo?.companyName
+            })
+        }
 
         return NextResponse.json({
             success: true,
