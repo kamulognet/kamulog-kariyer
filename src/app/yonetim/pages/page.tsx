@@ -3,17 +3,14 @@
 import { useState, useEffect } from 'react'
 import {
     Save,
-    FileText,
     AlertCircle,
     CheckCircle2,
-    Globe,
     Info,
     Phone,
     Shield,
     BookOpen,
     MapPin,
-    Mail,
-    Map
+    Mail
 } from 'lucide-react'
 
 interface PageContent {
@@ -21,7 +18,6 @@ interface PageContent {
     contact: string
     privacy: string
     terms: string
-    mapEmbed: string
     address: string
     phone: string
     email: string
@@ -32,7 +28,6 @@ const defaultContent: PageContent = {
     contact: 'E-posta: info@kariyerkamulog.com\nTelefon: +90 555 123 4567',
     privacy: 'Gizlilik politikamız hakkında bilgi.',
     terms: 'Kullanım şartları ve koşulları.',
-    mapEmbed: '',
     address: '',
     phone: '',
     email: ''
@@ -89,7 +84,6 @@ export default function PagesAdminPage() {
     const tabs = [
         { id: 'about', label: 'Hakkımızda', icon: Info },
         { id: 'contact', label: 'İletişim Bilgileri', icon: Phone },
-        { id: 'map', label: 'Harita', icon: Map },
         { id: 'privacy', label: 'Gizlilik Politikası', icon: Shield },
         { id: 'terms', label: 'Kullanım Şartları', icon: BookOpen },
     ]
@@ -107,7 +101,7 @@ export default function PagesAdminPage() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Sayfa İçerikleri</h1>
-                    <p className="text-slate-400">Site alt sayfalarını ve footer bilgilerini düzenleyin</p>
+                    <p className="text-slate-400">Site sayfalarını ve SEO içeriklerini düzenleyin</p>
                 </div>
                 <button
                     onClick={handleSave}
@@ -220,37 +214,6 @@ export default function PagesAdminPage() {
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
-
-                {activeTab === 'map' && (
-                    <div className="space-y-4">
-                        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                            <Map className="w-5 h-5 text-orange-400" />
-                            Google Maps Embed
-                        </h2>
-                        <p className="text-sm text-slate-400">
-                            Google Maps'ten "Paylaş" → "Haritayı yerleştir" seçeneğinden iframe kodunu alın ve sadece src="" içindeki URL'yi yapıştırın.
-                        </p>
-                        <input
-                            type="text"
-                            value={content.mapEmbed}
-                            onChange={(e) => setContent({ ...content, mapEmbed: e.target.value })}
-                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none font-mono text-sm"
-                            placeholder="https://www.google.com/maps/embed?pb=..."
-                        />
-                        {content.mapEmbed && (
-                            <div className="mt-4 rounded-xl overflow-hidden h-64">
-                                <iframe
-                                    src={content.mapEmbed}
-                                    width="100%"
-                                    height="100%"
-                                    style={{ border: 0 }}
-                                    loading="lazy"
-                                    title="Preview"
-                                />
-                            </div>
-                        )}
                     </div>
                 )}
 

@@ -3,30 +3,33 @@
 import { useState, useEffect, useRef } from 'react'
 import { MessageCircle, X } from 'lucide-react'
 
-interface WhatsAppButtonProps {
-    phoneNumber?: string
+interface WhatsAppSettings {
+    phoneNumber: string
+    enabled: boolean
+    defaultMessage: string
 }
 
-export default function WhatsAppButton({ phoneNumber }: WhatsAppButtonProps) {
-    const [phone, setPhone] = useState(phoneNumber || '')
+export default function WhatsAppButton() {
+    const [settings, setSettings] = useState<WhatsAppSettings | null>(null)
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
     const [isVisible, setIsVisible] = useState(true)
+    const [mounted, setMounted] = useState(false)
     const buttonRef = useRef<HTMLDivElement>(null)
     const dragOffset = useRef({ x: 0, y: 0 })
 
     useEffect(() => {
-        // Load phone from settings
-        if (!phoneNumber) {
-            fetch('/api/settings/payment')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.whatsappNumber) {
-                        setPhone(data.whatsappNumber)
-                    }
-                })
-                .catch(console.error)
-        }
+        setMounted(true)
+
+        // Load settings
+        fetch('/api/settings/whatsapp')
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.phoneNumber) {
+                    setSettings(data)
+                }
+            })
+            .catch(console.error)
 
         // Load saved position
         const savedPosition = localStorage.getItem('whatsapp-button-position')
@@ -35,13 +38,12 @@ export default function WhatsAppButton({ phoneNumber }: WhatsAppButtonProps) {
                 const pos = JSON.parse(savedPosition)
                 setPosition(pos)
             } catch {
-                // Use default
+                setPosition({ x: window.innerWidth - 80, y: window.innerHeight - 100 })
             }
         } else {
-            // Default: bottom-right
             setPosition({ x: window.innerWidth - 80, y: window.innerHeight - 100 })
         }
-    }, [phoneNumber])
+    }, [])
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (!buttonRef.current) return
@@ -109,22 +111,24 @@ export default function WhatsAppButton({ phoneNumber }: WhatsAppButtonProps) {
     }, [isDragging, position])
 
     const handleClick = () => {
-        if (isDragging) return
-        if (!phone) return
+        if (isDragging || !settings?.phoneNumber) return
 
-        // Format phone - remove non-digits, ensure +90
-        let formattedPhone = phone.replace(/\D/g, '')
-        if (formattedPhone.startsWith('0')) {
-            formattedPhone = '90' + formattedPhone.substring(1)
-        } else if (!formattedPhone.startsWith('90')) {
-            formattedPhone = '90' + formattedPhone
+        let phone = settings.phoneNumber.replace(/\D/g, '')
+        if (phone.startsWith('0')) {
+            phone = '90' + phone.substring(1)
+        } else if (!phone.startsWith('90')) {
+            phone = '90' + phone
         }
 
-        const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent('Merhaba, bilgi almak istiyorum.')}`
-        window.open(whatsappUrl, '_blank')
+        const message = encodeURIComponent(settings.defaultMessage || 'Merhaba, bilgi almak istiyorum.')
+        window.open(`https://wa.me/${phone}?text=${message}`, '_blank')
     }
 
-    if (!isVisible || !phone) return null
+    // Don't render until mounted (prevents hydration mismatch)
+    if (!mounted) return null
+
+    // Don't render if not visible, disabled, or no phone number
+    if (!isVisible || !settings?.enabled || !settings?.phoneNumber) return null
 
     return (
         <div

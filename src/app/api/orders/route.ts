@@ -21,8 +21,14 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const { plan, amount } = body
 
-        if (!plan || amount === undefined) {
-            return NextResponse.json({ error: 'Plan ve tutar gerekli' }, { status: 400 })
+        console.log('Order request:', { plan, amount, userId: session.user.id })
+
+        if (!plan) {
+            return NextResponse.json({ error: 'Plan gerekli' }, { status: 400 })
+        }
+
+        if (amount === undefined || amount === null) {
+            return NextResponse.json({ error: 'Tutar gerekli' }, { status: 400 })
         }
 
         const orderNumber = generateOrderNumber()
@@ -31,13 +37,15 @@ export async function POST(request: NextRequest) {
         const salesRecord = await prisma.salesRecord.create({
             data: {
                 userId: session.user.id,
-                plan,
-                amount,
+                plan: String(plan),
+                amount: Number(amount),
                 status: 'pending',
                 orderNumber,
                 paymentMethod: 'BANK_TRANSFER'
             }
         })
+
+        console.log('Order created:', salesRecord)
 
         // Kullanıcı bilgilerini al
         const user = await prisma.user.findUnique({
@@ -50,8 +58,8 @@ export async function POST(request: NextRequest) {
             order: {
                 id: salesRecord.id,
                 orderCode: orderNumber,
-                plan,
-                amount,
+                plan: salesRecord.plan,
+                amount: salesRecord.amount,
                 status: 'pending',
                 createdAt: salesRecord.createdAt,
                 user
@@ -59,6 +67,9 @@ export async function POST(request: NextRequest) {
         })
     } catch (error) {
         console.error('Error creating order:', error)
-        return NextResponse.json({ error: 'Sipariş oluşturulamadı' }, { status: 500 })
+        return NextResponse.json({
+            error: 'Sipariş oluşturulamadı',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 })
     }
 }
