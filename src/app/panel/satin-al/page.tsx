@@ -29,9 +29,12 @@ interface Plan {
 
 interface PaymentInfo {
     companyName: string
+    companyNote: string
     iban: string
     bankName: string
     whatsappNumber: string
+    vkn: string
+    taxOffice: string
     salesAgreement: string
     refundPolicy: string
 }
@@ -391,70 +394,106 @@ export default function PurchasePage() {
 
                 {step === 'complete' && orderDetails && paymentInfo && (
                     <div className="max-w-2xl mx-auto">
-                        <div className="text-center mb-8">
-                            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <CheckCircle2 className="w-10 h-10 text-green-400" />
+                        {/* Header */}
+                        <div className="bg-green-50 border border-green-200 rounded-2xl p-6 mb-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                                    <CheckCircle2 className="w-6 h-6 text-white" />
+                                </div>
+                                <h1 className="text-2xl font-bold text-green-800">Siparişiniz Oluşturuldu!</h1>
                             </div>
-                            <h1 className="text-2xl font-bold text-white mb-2">Siparişiniz Oluşturuldu!</h1>
-                            <p className="text-slate-400">Ödemenizi yapın ve WhatsApp üzerinden bilgilendirin</p>
-                        </div>
-
-                        {/* Sipariş Detayları */}
-                        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700 p-8 mb-6">
-                            <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                <Package className="w-5 h-5 text-purple-400" />
-                                Sipariş Özeti
-                            </h2>
-
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center p-4 bg-purple-500/10 rounded-xl border border-purple-500/20">
-                                    <span className="text-slate-400">Sipariş No</span>
-                                    <span className="text-purple-400 font-mono font-bold text-lg">{orderDetails.orderCode}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-400">Plan</span>
-                                    <span className="text-white font-medium">{orderDetails.plan}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-400">Tutar</span>
-                                    <span className="text-white font-bold text-xl">{orderDetails.amount} TL</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-400">Durum</span>
-                                    <span className="px-3 py-1 bg-yellow-500/10 text-yellow-400 text-sm font-medium rounded-full">
-                                        Ödeme Bekleniyor
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="mt-6 pt-6 border-t border-slate-700">
-                                <h3 className="text-sm font-medium text-slate-400 mb-3">Ödeme Bilgileri</h3>
-                                <div className="space-y-2 text-sm">
-                                    <p className="text-white"><span className="text-slate-400">Alıcı:</span> {paymentInfo.companyName}</p>
-                                    <p className="text-white"><span className="text-slate-400">Banka:</span> {paymentInfo.bankName}</p>
-                                    <p className="text-blue-400 font-mono"><span className="text-slate-400">IBAN:</span> {paymentInfo.iban}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl mb-6">
-                            <p className="text-yellow-400 text-sm text-center">
-                                <AlertCircle className="w-4 h-4 inline mr-2" />
-                                Ödeme yaptıktan sonra aşağıdaki buton ile WhatsApp'tan bilgilendirin. Aboneliğiniz onaylandıktan sonra aktif olacaktır.
+                            <p className="text-green-700">
+                                Sipariş No: <span className="font-bold text-green-900">{orderDetails.orderCode}</span>
                             </p>
                         </div>
 
+                        {/* Ödeme Bilgileri Card */}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-6 shadow-sm">
+                            <div className="flex items-center gap-2 mb-6">
+                                <CreditCard className="w-5 h-5 text-slate-600" />
+                                <h2 className="text-lg font-bold text-slate-800">Ödeme Bilgileri</h2>
+                            </div>
+
+                            <div className="space-y-5">
+                                {/* Toplam Tutar */}
+                                <div className="flex justify-between items-center">
+                                    <span className="text-slate-600">Toplam Tutar:</span>
+                                    <span className="text-xl font-bold text-red-600">{orderDetails.amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span>
+                                </div>
+
+                                <hr className="border-slate-200" />
+
+                                {/* IBAN */}
+                                <div>
+                                    <p className="text-slate-500 text-sm mb-1">IBAN:</p>
+                                    <p className="text-xl font-bold text-slate-900 font-mono tracking-wide">
+                                        {paymentInfo.iban}
+                                    </p>
+                                </div>
+
+                                <hr className="border-slate-200" />
+
+                                {/* Şirket */}
+                                <div>
+                                    <p className="text-slate-500 text-sm mb-1">Şirket:</p>
+                                    <p className="font-bold text-slate-900">*{paymentInfo.companyName}*</p>
+                                    {paymentInfo.companyNote && (
+                                        <p className="text-slate-600 text-sm">{paymentInfo.companyNote}</p>
+                                    )}
+                                </div>
+
+                                {/* Vergi Bilgileri */}
+                                {(paymentInfo.vkn || paymentInfo.taxOffice) && (
+                                    <>
+                                        <hr className="border-slate-200" />
+                                        <div>
+                                            <p className="text-slate-500 text-sm mb-2">Vergi Bilgileri:</p>
+                                            <div className="space-y-1">
+                                                {paymentInfo.vkn && (
+                                                    <p className="text-slate-800 flex items-center gap-2">
+                                                        <span className="text-blue-600 font-bold">🆔</span>
+                                                        VKN: {paymentInfo.vkn}
+                                                    </p>
+                                                )}
+                                                {paymentInfo.taxOffice && (
+                                                    <p className="text-slate-800 flex items-center gap-2">
+                                                        <span>🏛️</span>
+                                                        *{paymentInfo.taxOffice}*
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                <hr className="border-slate-200" />
+
+                                {/* Önemli Not */}
+                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                                    <p className="text-amber-800 text-sm">
+                                        <span className="font-bold">📝 Önemli:</span><br />
+                                        Ödeme açıklamasına sipariş numaranızı (<span className="font-bold text-amber-900">{orderDetails.orderCode}</span>) yazın.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Ödemeyi Yaptım Butonu */}
                         <button
                             onClick={handleWhatsAppRedirect}
-                            className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-green-600 hover:bg-green-500 text-white font-bold text-lg rounded-xl transition shadow-lg shadow-green-500/30"
+                            className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-teal-600 hover:bg-teal-500 text-white font-bold text-lg rounded-xl transition shadow-lg"
                         >
-                            <MessageCircle className="w-6 h-6" />
-                            WhatsApp ile Bildir
+                            <CheckCircle2 className="w-6 h-6" />
+                            Ödemeyi Yaptım
                         </button>
+
+                        <p className="text-center text-slate-500 text-sm mt-4">
+                            Ödeme yaptıktan sonra yukarıdaki butona tıklayarak WhatsApp üzerinden bilgilendiriniz.
+                        </p>
 
                         <Link
                             href="/panel/siparislerim"
-                            className="block text-center mt-4 text-slate-400 hover:text-white transition"
+                            className="block text-center mt-4 text-slate-400 hover:text-slate-600 transition"
                         >
                             Siparişlerimi Görüntüle →
                         </Link>

@@ -167,13 +167,12 @@ export default function SubscriptionPage() {
                                 Kurumsal Güvence
                             </h3>
                             <p className="text-slate-400 text-sm">
-                                Ödemeleriniz 256-bit SSL sertifikası ile korunmaktadır. Memnun kalmazsanız 14 gün içinde değişim hakkı.
+                                Ödemeleriniz 256-bit SSL sertifikası ile korunmaktadır.
                             </p>
                         </div>
-                        <div className="flex gap-4 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-                            <div className="h-8 w-12 bg-white/10 rounded"></div>
-                            <div className="h-8 w-12 bg-white/10 rounded"></div>
-                            <div className="h-8 w-12 bg-white/10 rounded"></div>
+                        <div className="flex gap-4 items-center">
+                            <img src="/visa.png" alt="Visa" className="h-8 object-contain" />
+                            <img src="/mastercard.png" alt="Mastercard" className="h-10 object-contain" />
                         </div>
                     </div>
                 </div>
