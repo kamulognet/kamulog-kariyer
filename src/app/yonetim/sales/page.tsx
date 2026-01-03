@@ -10,6 +10,7 @@ import {
     Plus,
     Eye,
     Edit2,
+    Trash2,
     RefreshCw,
     Calendar,
     User,
@@ -78,10 +79,19 @@ export default function AdminSalesPage() {
     const [createForm, setCreateForm] = useState({
         userId: '',
         plan: 'BASIC',
-        amount: '',
+        amount: 350, // Default Basic price
         paymentMethod: 'HAVALE',
         notes: '',
     })
+
+    // Update amount when plan changes
+    useEffect(() => {
+        if (createForm.plan === 'BASIC') {
+            setCreateForm(prev => ({ ...prev, amount: 350 }))
+        } else if (createForm.plan === 'PREMIUM') {
+            setCreateForm(prev => ({ ...prev, amount: 1000 }))
+        }
+    }, [createForm.plan])
 
     // User search for create modal
     const [userSearch, setUserSearch] = useState('')
@@ -137,7 +147,7 @@ export default function AdminSalesPage() {
     }
 
     const handleCreateSale = async () => {
-        if (!selectedUser || !createForm.amount) {
+        if (!selectedUser || (createForm.amount !== 0 && !createForm.amount)) {
             alert('Kullanıcı ve tutar zorunludur')
             return
         }
@@ -161,7 +171,7 @@ export default function AdminSalesPage() {
                 setCreateForm({
                     userId: '',
                     plan: 'BASIC',
-                    amount: '',
+                    amount: 350,
                     paymentMethod: 'HAVALE',
                     notes: '',
                 })
@@ -185,6 +195,27 @@ export default function AdminSalesPage() {
             loadSales()
         } catch (error) {
             console.error('Error updating sale:', error)
+        }
+    }
+
+    const handleDeleteSale = async (id: string, orderNumber: string) => {
+        if (!confirm(`${orderNumber} sipariş nolu kaydı silmek istediğinize emin misiniz?`)) {
+            return
+        }
+
+        try {
+            const res = await fetch(`/api/admin/sales?id=${id}`, {
+                method: 'DELETE',
+            })
+
+            if (res.ok) {
+                loadSales()
+            } else {
+                const data = await res.json()
+                alert(data.error || 'Silme başarısız')
+            }
+        } catch (error) {
+            console.error('Error deleting sale:', error)
         }
     }
 
@@ -392,12 +423,22 @@ export default function AdminSalesPage() {
                                             {new Date(sale.createdAt).toLocaleDateString('tr-TR')}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={() => setSelectedSale(sale)}
-                                                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => setSelectedSale(sale)}
+                                                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
+                                                    title="Detay"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteSale(sale.id, sale.orderNumber)}
+                                                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
+                                                    title="Sil"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -510,6 +551,7 @@ export default function AdminSalesPage() {
                                         value={createForm.amount}
                                         onChange={(e) => setCreateForm({ ...createForm, amount: e.target.value })}
                                         className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        placeholder="0"
                                     />
                                 </div>
                             </div>

@@ -67,10 +67,21 @@ export async function POST(req: NextRequest) {
             message: 'Kayıt başarılı',
             user,
         })
-    } catch (error) {
+    } catch (error: any) {
         console.error('Register error:', error)
+        console.error('Error message:', error?.message)
+        console.error('Error code:', error?.code)
+
+        // Prisma unique constraint error
+        if (error?.code === 'P2002') {
+            return NextResponse.json(
+                { error: 'Bu email veya telefon numarası zaten kayıtlı' },
+                { status: 400 }
+            )
+        }
+
         return NextResponse.json(
-            { error: 'Kayıt işlemi başarısız' },
+            { error: error?.message || 'Kayıt işlemi başarısız. Lütfen bilgilerinizi kontrol edin.' },
             { status: 500 }
         )
     }

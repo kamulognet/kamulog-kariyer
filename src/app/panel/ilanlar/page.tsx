@@ -4,7 +4,8 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Briefcase, MapPin, Building2, Search, Sparkles, Wand2, X, AlertCircle } from 'lucide-react'
+import { Briefcase, MapPin, Building2, Search, Sparkles, Wand2, X, AlertCircle, CheckCircle2 } from 'lucide-react'
+import PanelHeader from '@/components/PanelHeader'
 
 interface JobListing {
     id: string
@@ -13,17 +14,23 @@ interface JobListing {
     location: string | null
     type: string
     description: string
+    sourceUrl?: string | null
+    applicationUrl?: string | null
+    salary?: string | null
+    deadline?: string | null
 }
 
 interface MatchedJob extends JobListing {
     matchScore: number
     matchReason: string
     suggestionReason?: string
+    isAlternative?: boolean
 }
 
 interface CV {
     id: string
     title: string
+    data?: string
 }
 
 export default function JobsPage() {
@@ -33,12 +40,15 @@ export default function JobsPage() {
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('ALL')
     const [search, setSearch] = useState('')
+    const [locationFilter, setLocationFilter] = useState('')
+    const [userLocation, setUserLocation] = useState<string>('')
     const [showMatchModal, setShowMatchModal] = useState(false)
     const [matchedJobs, setMatchedJobs] = useState<MatchedJob[]>([])
     const [matchLoading, setMatchLoading] = useState(false)
     const [matchError, setMatchError] = useState('')
     const [userCVs, setUserCVs] = useState<CV[]>([])
     const [selectedCV, setSelectedCV] = useState<string>('')
+    const [notification, setNotification] = useState<{ show: boolean; type: 'info' | 'error' | 'success'; message: string }>({ show: false, type: 'info', message: '' })
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -72,6 +82,18 @@ export default function JobsPage() {
             setUserCVs(data.cvs || [])
             if (data.cvs && data.cvs.length > 0) {
                 setSelectedCV(data.cvs[0].id)
+
+                // İlk CV'den kullanıcının şehrini çıkar
+                try {
+                    const cvData = JSON.parse(data.cvs[0].data || '{}')
+                    const city = cvData.personalInfo?.city || cvData.city || ''
+                    if (city) {
+                        setUserLocation(city)
+                        setLocationFilter(city)
+                    }
+                } catch (e) {
+                    console.log('CV data parse error')
+                }
             }
         } catch (error) {
             console.error('Error loading CVs:', error)
@@ -108,6 +130,16 @@ export default function JobsPage() {
             }
 
             setMatchedJobs(data.suggestions || [])
+
+            // Eğer uygun ilan yoksa modalı kapat ve bilgi ver
+            if (!data.suggestions || data.suggestions.length === 0) {
+                setShowMatchModal(false)
+                setNotification({
+                    show: true,
+                    type: 'info',
+                    message: 'Profilinize uygun açık bir ilan bulunamadı. Lütfen ilanları takip etmeye devam edin.'
+                })
+            }
         } catch (error) {
             setMatchError('Bir hata oluştu')
         } finally {
@@ -115,15 +147,35 @@ export default function JobsPage() {
         }
     }
 
-    const filteredJobs = jobs.filter(job =>
-        job.title.toLowerCase().includes(search.toLowerCase()) ||
-        job.company.toLowerCase().includes(search.toLowerCase())
-    )
+    // Şehir listesi
+    const cities = [...new Set(jobs.map(j => j.location).filter(Boolean))] as string[]
+
+    // Filtreleme ve sıralama
+    const filteredJobs = jobs
+        .filter(job =>
+            (job.title.toLowerCase().includes(search.toLowerCase()) ||
+                job.company.toLowerCase().includes(search.toLowerCase())) &&
+            (locationFilter === '' ||
+                job.location?.toLowerCase().includes(locationFilter.toLowerCase()) ||
+                job.location?.toLowerCase().includes('türkiye geneli'))
+        )
+        .sort((a, b) => {
+            // Önce kullanıcının şehri veya "Türkiye Geneli" olanları göster
+            const aMatch = a.location?.toLowerCase().includes(userLocation.toLowerCase()) ||
+                a.location?.toLowerCase().includes('türkiye geneli')
+            const bMatch = b.location?.toLowerCase().includes(userLocation.toLowerCase()) ||
+                b.location?.toLowerCase().includes('türkiye geneli')
+
+            if (aMatch && !bMatch) return -1
+            if (!aMatch && bMatch) return 1
+            return 0
+        })
 
     if (status === 'loading') return null
 
     return (
-        <div className="min-h-screen bg-[#0f172a] text-slate-200">
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+            <PanelHeader />
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div>
@@ -140,7 +192,7 @@ export default function JobsPage() {
                             Bana Uygun İşler
                         </button>
                         <Link
-                            href="/dashboard/jobs/analyses"
+                            href="/panel/ilanlar/analyses"
                             className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg hover:bg-purple-600/30 transition"
                         >
                             <Sparkles className="w-4 h-4" />
@@ -181,7 +233,7 @@ export default function JobsPage() {
                             <p className="text-yellow-200">AI iş eşleştirmesi için önce bir CV oluşturmanız gerekiyor.</p>
                         </div>
                         <Link
-                            href="/dashboard/cv-builder"
+                            href="/panel/cv-olustur"
                             className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-medium rounded-lg transition text-sm"
                         >
                             CV Oluştur
@@ -201,6 +253,20 @@ export default function JobsPage() {
                             className="w-full pl-10 pr-4 py-2 bg-slate-900/50 border border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
                         />
                     </div>
+
+                    {/* Şehir Filtresi */}
+                    <select
+                        value={locationFilter}
+                        onChange={(e) => setLocationFilter(e.target.value)}
+                        className="px-4 py-2 bg-slate-900/50 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">Tüm Şehirler</option>
+                        {userLocation && <option value={userLocation}>📍 {userLocation} (CV&apos;nizdeki)</option>}
+                        {cities.filter(c => c !== userLocation).map(city => (
+                            <option key={city} value={city}>{city}</option>
+                        ))}
+                    </select>
+
                     <div className="flex gap-2">
                         {['ALL', 'PUBLIC', 'PRIVATE'].map((t) => (
                             <button
@@ -253,15 +319,33 @@ export default function JobsPage() {
                                         <p className="text-slate-300 line-clamp-2 text-sm">
                                             {job.description}
                                         </p>
+                                        {/* Ek bilgiler */}
+                                        <div className="flex flex-wrap gap-3 mt-3">
+                                            {job.deadline && (
+                                                <span className="px-2 py-1 bg-red-500/10 text-red-400 text-xs rounded-lg">
+                                                    ⏰ Son: {new Date(job.deadline).toLocaleDateString('tr-TR')}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="flex flex-col gap-2 justify-center">
                                         <Link
-                                            href={`/dashboard/jobs/analyze/${job.id}`}
+                                            href={`/panel/ilanlar/analyze/${job.id}`}
                                             className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition text-center flex items-center gap-2 justify-center"
                                         >
                                             <Sparkles className="w-4 h-4" />
                                             Yapay Zeka Analizi
                                         </Link>
+                                        {job.sourceUrl && (
+                                            <a
+                                                href={job.sourceUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-medium rounded-xl transition text-center flex items-center gap-2 justify-center"
+                                            >
+                                                🔗 Kaynak Sitede Gör
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -315,14 +399,23 @@ export default function JobsPage() {
                                 ) : (
                                     <div className="space-y-4">
                                         {matchedJobs.map((job, index) => (
-                                            <div key={job.id} className="bg-slate-900/50 rounded-xl p-4 border border-slate-700">
+                                            <div key={job.id} className={`bg-slate-900/50 rounded-xl p-4 border ${job.isAlternative ? 'border-slate-700' : 'border-purple-500/30'}`}>
                                                 <div className="flex items-start justify-between gap-4">
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2 mb-2">
-                                                            <span className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${job.isAlternative ? 'bg-slate-600' : 'bg-purple-600'}`}>
                                                                 {index + 1}
                                                             </span>
                                                             <h4 className="text-lg font-semibold text-white">{job.title}</h4>
+                                                            {(job as any).isAlternative ? (
+                                                                <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-slate-700 text-slate-400 border border-slate-600">
+                                                                    ALTERNATİF
+                                                                </span>
+                                                            ) : (
+                                                                <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                                                    EN UYGUN
+                                                                </span>
+                                                            )}
                                                             <span className={`px-2 py-0.5 text-xs font-medium rounded ${job.type === 'PUBLIC' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
                                                                 }`}>
                                                                 {job.type === 'PUBLIC' ? 'Kamu' : 'Özel'}
@@ -330,17 +423,24 @@ export default function JobsPage() {
                                                         </div>
                                                         <p className="text-slate-400 text-sm mb-2">{job.company} • {job.location}</p>
                                                         {job.suggestionReason && (
-                                                            <p className="text-green-400 text-sm flex items-start gap-2">
-                                                                <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                                            <p className={`${job.isAlternative ? 'text-slate-400' : 'text-green-400'} text-sm flex items-start gap-2 italic`}>
+                                                                {job.isAlternative ? (
+                                                                    <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5 text-slate-500" />
+                                                                ) : (
+                                                                    <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                                                )}
                                                                 {job.suggestionReason}
                                                             </p>
                                                         )}
                                                     </div>
                                                     <Link
-                                                        href={`/dashboard/jobs/analyze/${job.id}`}
-                                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition flex-shrink-0"
+                                                        href={`/panel/ilanlar/analyze/${job.id}`}
+                                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition flex-shrink-0 ${job.isAlternative
+                                                            ? 'bg-slate-700 hover:bg-slate-600 text-white'
+                                                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                                                            }`}
                                                     >
-                                                        Detaylı Analiz
+                                                        Detaylar
                                                     </Link>
                                                 </div>
                                             </div>
@@ -354,6 +454,50 @@ export default function JobsPage() {
                                     AI önerileri CV&apos;nizdeki bilgilere göre hesaplanmıştır. Detaylı analiz için ilana tıklayın.
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Notification Modal */}
+                {notification.show && (
+                    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+                        <div className={`bg-slate-800 rounded-2xl p-6 max-w-md w-full border ${notification.type === 'error' ? 'border-red-500/50' :
+                            notification.type === 'success' ? 'border-green-500/50' :
+                                'border-blue-500/50'
+                            }`}>
+                            <div className="flex items-start gap-4">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${notification.type === 'error' ? 'bg-red-500/20' :
+                                    notification.type === 'success' ? 'bg-green-500/20' :
+                                        'bg-blue-500/20'
+                                    }`}>
+                                    {notification.type === 'error' ? (
+                                        <X className="w-6 h-6 text-red-400" />
+                                    ) : notification.type === 'success' ? (
+                                        <CheckCircle2 className="w-6 h-6 text-green-400" />
+                                    ) : (
+                                        <AlertCircle className="w-6 h-6 text-blue-400" />
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className={`font-semibold mb-2 ${notification.type === 'error' ? 'text-red-400' :
+                                        notification.type === 'success' ? 'text-green-400' :
+                                            'text-blue-400'
+                                        }`}>
+                                        {notification.type === 'error' ? 'Hata' :
+                                            notification.type === 'success' ? 'Başarılı' :
+                                                'Bilgi'}
+                                    </h3>
+                                    <p className="text-slate-300 text-sm">
+                                        {notification.message}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setNotification({ ...notification, show: false })}
+                                className="mt-4 w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
+                            >
+                                Tamam
+                            </button>
                         </div>
                     </div>
                 )}

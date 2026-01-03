@@ -42,6 +42,10 @@ export default function AdminUsersPage() {
     const [page, setPage] = useState(1)
     const [search, setSearch] = useState('')
 
+    // Bulk Actions
+    const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+    const [bulkActionLoading, setBulkActionLoading] = useState(false)
+
     // Edit Modal
     const [editUser, setEditUser] = useState<User | null>(null)
     const [editForm, setEditForm] = useState({
@@ -169,6 +173,70 @@ export default function AdminUsersPage() {
         }
     }
 
+    // Bulk Action Handlers
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedUsers(users.map(u => u.id))
+        } else {
+            setSelectedUsers([])
+        }
+    }
+
+    const handleSelectUser = (userId: string) => {
+        if (selectedUsers.includes(userId)) {
+            setSelectedUsers(selectedUsers.filter(id => id !== userId))
+        } else {
+            setSelectedUsers([...selectedUsers, userId])
+        }
+    }
+
+    const handleBulkDelete = async () => {
+        if (!confirm(`${selectedUsers.length} kullanıcıyı silmek istediğinize emin misiniz?`)) return
+
+        setBulkActionLoading(true)
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userIds: selectedUsers })
+            })
+
+            if (res.ok) {
+                setSelectedUsers([])
+                loadUsers()
+            } else {
+                const data = await res.json()
+                alert(data.error || 'Silme başarısız')
+            }
+        } catch (error) {
+            console.error('Bulk delete error:', error)
+        } finally {
+            setBulkActionLoading(false)
+        }
+    }
+
+    const handleBulkCredits = async (amount: number) => {
+        if (!confirm(`${selectedUsers.length} kullanıcıya ${amount} kredi eklenecek. Onaylıyor musunuz?`)) return
+
+        setBulkActionLoading(true)
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userIds: selectedUsers, credits: amount }) // existing PUT handles userIds check? I need to verify backend again but I think I added it. Yes I added it.
+            })
+
+            if (res.ok) {
+                setSelectedUsers([])
+                loadUsers()
+            }
+        } catch (error) {
+            console.error('Bulk credits error:', error)
+        } finally {
+            setBulkActionLoading(false)
+        }
+    }
+
     const planColors: Record<string, string> = {
         FREE: 'bg-slate-500/20 text-slate-400',
         BASIC: 'bg-blue-500/20 text-blue-400',
@@ -223,12 +291,59 @@ export default function AdminUsersPage() {
                 </button>
             </div>
 
+            {/* Bulk Action Bar */}
+            {selectedUsers.length > 0 && (
+                <div className="bg-purple-900/40 border border-purple-500/30 rounded-xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-4">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-lg font-bold">
+                            {selectedUsers.length} Seçili
+                        </div>
+                        <p className="text-purple-200 text-sm">kullanıcı üzerinde işlem yapılıyor</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => handleBulkCredits(10)}
+                            disabled={bulkActionLoading}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-300 rounded-lg transition border border-green-500/30"
+                        >
+                            <Plus className="w-4 h-4" />
+                            +10 Kredi
+                        </button>
+                        <button
+                            onClick={() => handleBulkCredits(100)}
+                            disabled={bulkActionLoading}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-300 rounded-lg transition border border-green-500/30"
+                        >
+                            <Plus className="w-4 h-4" />
+                            +100
+                        </button>
+                        <div className="h-6 w-px bg-purple-500/30 mx-2"></div>
+                        <button
+                            onClick={handleBulkDelete}
+                            disabled={bulkActionLoading}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-300 rounded-lg transition border border-red-500/30"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Seçilenleri Sil
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Users Table */}
             <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-700 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-slate-900/50">
                             <tr>
+                                <th className="px-6 py-4 text-left">
+                                    <input
+                                        type="checkbox"
+                                        onChange={handleSelectAll}
+                                        checked={users.length > 0 && selectedUsers.length === users.length}
+                                        className="rounded border-slate-600 bg-slate-800 text-purple-600 focus:ring-purple-500"
+                                    />
+                                </th>
                                 <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">Kullanıcı</th>
                                 <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">Telefon</th>
                                 <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">Kredi</th>
@@ -254,7 +369,15 @@ export default function AdminUsersPage() {
                                 </tr>
                             ) : (
                                 users.map((user) => (
-                                    <tr key={user.id} className="hover:bg-slate-700/30 transition">
+                                    <tr key={user.id} className={`hover:bg-slate-700/30 transition ${selectedUsers.includes(user.id) ? 'bg-slate-700/30' : ''}`}>
+                                        <td className="px-6 py-4">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedUsers.includes(user.id)}
+                                                onChange={() => handleSelectUser(user.id)}
+                                                className="rounded border-slate-600 bg-slate-800 text-purple-600 focus:ring-purple-500"
+                                            />
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${user.role === 'ADMIN' ? 'bg-red-500/20' : 'bg-slate-700'}`}>
@@ -491,8 +614,8 @@ export default function AdminUsersPage() {
                             <button
                                 onClick={handleCreditChange}
                                 className={`px-6 py-2 rounded-lg font-medium transition ${creditModal.type === 'add'
-                                        ? 'bg-green-600 hover:bg-green-500 text-white'
-                                        : 'bg-red-600 hover:bg-red-500 text-white'
+                                    ? 'bg-green-600 hover:bg-green-500 text-white'
+                                    : 'bg-red-600 hover:bg-red-500 text-white'
                                     }`}
                             >
                                 {creditModal.type === 'add' ? 'Ekle' : 'Çıkar'}

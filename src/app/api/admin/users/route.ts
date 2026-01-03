@@ -89,7 +89,40 @@ export async function PUT(req: NextRequest) {
 
     try {
         const body = await req.json()
-        const { userId, name, phoneNumber, credits, role, plan } = body
+        const { userId, userIds, name, phoneNumber, credits, role, plan } = body
+
+        // Toplu İşlem
+        if (userIds && Array.isArray(userIds)) {
+            let updatedCount = 0
+
+            // Kredi Ekleme (Mevcut kredinin üzerine eklenir)
+            if (credits !== undefined) {
+                const result = await prisma.user.updateMany({
+                    where: { id: { in: userIds } },
+                    data: { credits: { increment: credits } } // Fix: Set değil increment yapmalıydık ama updateMany desteklemezse loop gerekebilir. 
+                    // Prisma updateMany increment destekler.
+                })
+                updatedCount = result.count
+
+                // Log
+                await prisma.adminLog.create({
+                    data: {
+                        adminId: session.user.id,
+                        action: 'BULK_UPDATE',
+                        targetType: 'USER',
+                        targetId: 'BULK',
+                        details: JSON.stringify({
+                            action: 'ADD_CREDITS',
+                            count: updatedCount,
+                            amount: credits,
+                            userIds
+                        }),
+                    },
+                })
+            }
+
+            return NextResponse.json({ message: `${updatedCount} kullanıcı güncellendi` })
+        }
 
         if (!userId) {
             return NextResponse.json({ error: 'userId gerekli' }, { status: 400 })
@@ -121,13 +154,31 @@ export async function PUT(req: NextRequest) {
                 where: { userId },
             })
 
+            const newStatus = plan === 'FREE' ? 'INACTIVE' : 'ACTIVE'
+            const newExpiresAt = plan !== 'FREE' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null
+
+            // Kredi miktarını plana göre güncelle (Eğer kredi elle belirtilmediyse)
+            if (credits === undefined) {
+                // Mevcut kredinin üzerine ekle veya sıfırla
+                let additionalCredits = 0
+                if (plan === 'BASIC') additionalCredits = 50
+                if (plan === 'PREMIUM') additionalCredits = 1000 // Sembolik yüksek kredi
+
+                if (additionalCredits > 0) {
+                    await prisma.user.update({
+                        where: { id: userId },
+                        data: { credits: { increment: additionalCredits } }
+                    })
+                }
+            }
+
             if (existingSubscription) {
                 await prisma.subscription.update({
                     where: { userId },
                     data: {
                         plan,
-                        status: plan === 'FREE' ? 'INACTIVE' : 'ACTIVE',
-                        expiresAt: plan !== 'FREE' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
+                        status: newStatus,
+                        expiresAt: newExpiresAt,
                     },
                 })
             } else if (plan !== 'FREE') {
@@ -171,48 +222,50 @@ export async function DELETE(req: NextRequest) {
     }
 
     try {
+        // Bulk Delete Support via JSON body
+        let userIds: string[] = []
+
+        try {
+            const body = await req.json().catch(() => null)
+            if (body && body.userIds) {
+                userIds = body.userIds
+            }
+        } catch (e) { }
+
         const { searchParams } = new URL(req.url)
         const userId = searchParams.get('userId')
+        if (userId) userIds.push(userId)
 
-        if (!userId) {
-            return NextResponse.json({ error: 'userId gerekli' }, { status: 400 })
+        if (userIds.length === 0) {
+            return NextResponse.json({ error: 'userId veya userIds gerekli' }, { status: 400 })
         }
 
         // Admin kendini silemesin
-        if (userId === session.user.id) {
+        if (userIds.includes(session.user.id)) {
             return NextResponse.json({ error: 'Kendinizi silemezsiniz' }, { status: 400 })
         }
 
-        // Kullanıcı bilgilerini al (log için)
-        const userToDelete = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { email: true, name: true },
-        })
-
-        if (!userToDelete) {
-            return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 })
-        }
-
-        // Kullanıcıyı sil (ilişkili veriler cascade ile silinir)
-        await prisma.user.delete({
-            where: { id: userId },
+        // Silme işlemi
+        const result = await prisma.user.deleteMany({
+            where: { id: { in: userIds } }
         })
 
         // Admin log kaydı
         await prisma.adminLog.create({
             data: {
                 adminId: session.user.id,
-                action: 'DELETE',
+                action: 'BULK_DELETE',
                 targetType: 'USER',
-                targetId: userId,
+                targetId: 'BULK',
                 details: JSON.stringify({
-                    deletedUser: userToDelete,
+                    count: result.count,
+                    deletedUserIds: userIds,
                     deletedBy: session.user.email,
                 }),
             },
         })
 
-        return NextResponse.json({ message: 'Kullanıcı silindi' })
+        return NextResponse.json({ message: `${result.count} kullanıcı silindi` })
     } catch (error) {
         console.error('Delete user error:', error)
         return NextResponse.json({ error: 'Kullanıcı silinemedi' }, { status: 500 })

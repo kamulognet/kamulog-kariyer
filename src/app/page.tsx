@@ -73,7 +73,7 @@ export default function Home() {
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
               </Link>
               <Link
-                href="/dashboard"
+                href="/panel"
                 className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold rounded-2xl transition backdrop-blur-sm"
               >
                 Panelime Git
@@ -234,7 +234,7 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
-                  href="/dashboard/subscription"
+                  href="/panel/abonelik"
                   className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold rounded-2xl transition shadow-xl shadow-purple-500/20 flex items-center justify-center gap-2"
                 >
                   Planları İncele

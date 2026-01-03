@@ -201,7 +201,7 @@ export default function JobMatchPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         <div className="flex items-center gap-4">
-                            <Link href="/dashboard/jobs" className="text-slate-400 hover:text-white transition">
+                            <Link href="/panel/ilanlar" className="text-slate-400 hover:text-white transition">
                                 <ArrowLeft className="w-5 h-5" />
                             </Link>
                             <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export default function JobMatchPage() {
                                 <div className="p-4 bg-slate-900 rounded-xl border border-slate-700 text-center">
                                     <FileText className="w-8 h-8 text-slate-500 mx-auto mb-2" />
                                     <p className="text-slate-400 text-sm">Henüz CV'niz yok</p>
-                                    <Link href="/dashboard/cv-builder" className="text-purple-400 text-sm hover:underline">
+                                    <Link href="/panel/cv-olustur" className="text-purple-400 text-sm hover:underline">
                                         CV Oluştur →
                                     </Link>
                                 </div>

@@ -28,7 +28,7 @@ function SubscriptionsContent() {
         if (status === 'unauthenticated') {
             router.push('/login')
         } else if (session?.user?.role !== 'ADMIN') {
-            router.push('/dashboard')
+            router.push('/panel')
         }
     }, [status, session, router])
 
@@ -112,15 +112,15 @@ function SubscriptionsContent() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         <div className="flex items-center gap-8">
-                            <h1 className="text-xl font-bold text-white">Admin Panel</h1>
+                            <h1 className="text-xl font-bold text-white">Yönetim Paneli</h1>
                             <nav className="flex gap-4">
-                                <Link href="/admin" className="text-slate-400 hover:text-white transition">
+                                <Link href="/yonetim" className="text-slate-400 hover:text-white transition">
                                     Anasayfa
                                 </Link>
-                                <Link href="/admin/users" className="text-slate-400 hover:text-white transition">
+                                <Link href="/yonetim/users" className="text-slate-400 hover:text-white transition">
                                     Kullanıcılar
                                 </Link>
-                                <Link href="/admin/subscriptions" className="text-purple-400 font-medium">
+                                <Link href="/yonetim/subscriptions" className="text-purple-400 font-medium">
                                     Abonelikler
                                 </Link>
                             </nav>

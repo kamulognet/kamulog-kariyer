@@ -8,13 +8,26 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  password     String
-  name         String?
-  phoneNumber  String?
-  role         String        @default("USER") // USER, ADMIN
-  credits      Int           @default(10) // Başlangıç kredisi
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  password            String
+  name                String?
+  phoneNumber         String?
+  role                String    @default("USER") // USER, ADMIN
+  credits             Int       @default(10) // Başlangıç kredisi
+  emailVerified       DateTime?
+  verificationCode    String?
+  newEmail            String?
+  emailChangeCode     String?
+  verificationExpires DateTime?
+
+  // Billing Info
+  address   String?
+  city      String?
+  district  String?
+  taxNumber String?
+  taxOffice String?
+
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   cvs          CV[]

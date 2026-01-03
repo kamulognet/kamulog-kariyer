@@ -102,7 +102,7 @@ export default function AdminDashboard() {
                             <Clock className="w-6 h-6 text-white" />
                         </div>
                     </div>
-                    <Link href="/admin/subscriptions?status=PENDING" className="text-yellow-200 text-sm mt-3 block hover:underline">
+                    <Link href="/yonetim/subscriptions?status=PENDING" className="text-yellow-200 text-sm mt-3 block hover:underline">
                         Görüntüle →
                     </Link>
                 </div>
@@ -164,7 +164,7 @@ export default function AdminDashboard() {
                     </h3>
                     <div className="space-y-3">
                         <Link
-                            href="/admin/subscriptions?status=PENDING"
+                            href="/yonetim/subscriptions?status=PENDING"
                             className="block p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl hover:bg-yellow-500/20 transition"
                         >
                             <div className="flex items-center justify-between">
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
                             </div>
                         </Link>
                         <Link
-                            href="/admin/jobs"
+                            href="/yonetim/jobs"
                             className="block p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl hover:bg-blue-500/20 transition"
                         >
                             <div className="flex items-center justify-between">
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
                             </div>
                         </Link>
                         <Link
-                            href="/admin/logs"
+                            href="/yonetim/logs"
                             className="block p-4 bg-slate-700/50 border border-slate-600 rounded-xl hover:bg-slate-700 transition"
                         >
                             <div className="flex items-center justify-between">
@@ -257,7 +257,7 @@ export default function AdminDashboard() {
                             <p className="text-slate-400 text-sm">
                                 Kamu: {stats?.jobs?.public || 0} | Özel: {stats?.jobs?.private || 0}
                             </p>
-                            <Link href="/admin/jobs" className="text-blue-400 text-sm hover:underline mt-1 inline-block">
+                            <Link href="/yonetim/jobs" className="text-blue-400 text-sm hover:underline mt-1 inline-block">
                                 İlanları Yönet →
                             </Link>
                         </div>

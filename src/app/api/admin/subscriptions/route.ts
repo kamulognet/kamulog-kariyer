@@ -94,8 +94,20 @@ export async function POST(req: NextRequest) {
                 },
             })
 
+            // Kredileri güncelle
+            let creditAmount = 0
+            if (subscription.plan === 'BASIC') creditAmount = 50
+            if (subscription.plan === 'PREMIUM') creditAmount = 1000
+
+            if (creditAmount > 0) {
+                await prisma.user.update({
+                    where: { id: subscription.userId },
+                    data: { credits: { increment: creditAmount } }
+                })
+            }
+
             return NextResponse.json({
-                message: 'Abonelik onaylandı',
+                message: 'Abonelik onaylandı ve krediler yüklendi',
                 subscription,
             })
         } else {
@@ -154,8 +166,20 @@ export async function PUT(req: NextRequest) {
             },
         })
 
+        // Kredileri güncelle
+        let creditAmount = 0
+        if (updated.plan === 'BASIC') creditAmount = 50
+        if (updated.plan === 'PREMIUM') creditAmount = 1000
+
+        if (creditAmount > 0) {
+            await prisma.user.update({
+                where: { id: updated.userId },
+                data: { credits: { increment: creditAmount } }
+            })
+        }
+
         return NextResponse.json({
-            message: 'Abonelik aktifleştirildi',
+            message: 'Abonelik aktifleştirildi ve krediler yüklendi',
             subscription: updated,
         })
     } catch (error) {

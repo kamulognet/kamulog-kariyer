@@ -215,18 +215,24 @@ export async function suggestBestJobs(
     cvData: CVData,
     jobs: JobListing[],
     limit: number = 5
-): Promise<{ jobId: string; reason: string }[]> {
+): Promise<{ jobId: string; reason: string; isAlternative: boolean }[]> {
     const response = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
             {
                 role: 'system',
-                content: `CV profiline en uygun ${limit} iş ilanını seç ve neden uygun olduğunu kısaca açıkla.
+                content: `CV profiline en uygun ${limit} iş ilanını seç. 
+Eğer profil ile doğrudan eşleşen (mükemmel uyumlu) ilanlar yoksa, CV'deki becerilerle yapılabilecek alternatif veya yakın sektördeki ilanları öner. 
+
+Önemli:
+- Eğer tam eşleşme varsa "Uygun İlan" olarak işaretle.
+- Eğer beceriler transfer edilebilirse "Alternatif Fırsat" olarak değerlendir.
+- Her öneri için neden uygun olduğunu veya neden alternatif olarak önerildiğini kısaca açıkla.
 
 JSON formatında yanıt ver:
 {
   "suggestions": [
-    { "jobId": "string", "reason": "kısa açıklama" }
+    { "jobId": "string", "reason": "kısa açıklama", "isAlternative": boolean }
   ]
 }
 

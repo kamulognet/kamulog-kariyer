@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
         }
 
         // OpenAI chat
-        const response = await generateCVChat(messages as ChatMessage[])
+        const rawResponse = await generateCVChat(messages as ChatMessage[])
+
+        // [CV_READY] kontrolü
+        const isFinished = rawResponse.includes('[CV_READY]')
+        const response = rawResponse.replace('[CV_READY]', '').trim()
 
         // Kullanımı artır
         await incrementUsage(session.user.id, 'CHAT_MESSAGE')
@@ -40,7 +44,7 @@ export async function POST(req: NextRequest) {
             await prisma.chatSession.update({
                 where: { id: sessionId },
                 data: {
-                    messages: JSON.stringify([...messages, { role: 'assistant', content: response }]),
+                    messages: JSON.stringify([...messages, { role: 'assistant', content: rawResponse }]), // DB'ye orijinal halini kaydet (etiketle beraber olabilir, sorun yok)
                     updatedAt: new Date(),
                 },
             })
@@ -48,6 +52,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
             message: response,
+            isFinished,
             remaining: limitCheck.remaining - 1,
         })
     } catch (error: unknown) {

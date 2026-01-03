@@ -13,6 +13,9 @@ export interface ScrapedJob {
     requirements: string
     type: 'PUBLIC' | 'PRIVATE'
     sourceUrl: string
+    applicationUrl: string
+    salary?: string
+    deadline?: string
 }
 
 // Kamu sektörü ilanları için örnek veriler
@@ -176,9 +179,30 @@ export function generateSampleJobs(count: number = 10): ScrapedJob[] {
     const publicCount = Math.ceil(count / 2)
     const privateCount = count - publicCount
 
+    // Maaş aralıkları kamu
+    const publicSalaries = ['22.104 TL (Asgari)', '25.000 - 30.000 TL', '30.000 - 40.000 TL', '35.000 - 45.000 TL']
+    // Maaş aralıkları özel
+    const privateSalaries = ['28.000 - 35.000 TL', '35.000 - 50.000 TL', '45.000 - 65.000 TL', '60.000 - 90.000 TL', '80.000+ TL']
+
+    // Kamu kaynakları
+    const publicSources = [
+        { url: 'https://kariyerkapisi.gov.tr/', name: 'Kariyer Kapısı' },
+        { url: 'https://www.ilan.gov.tr/ilan/kategori/8/kamu-akademik-personel', name: 'İlan.gov.tr' },
+        { url: 'https://esube.iskur.gov.tr/', name: 'İŞKUR' },
+    ]
+
     // Kamu ilanları
     for (let i = 0; i < publicCount; i++) {
         const template = getRandomElement(publicJobTemplates)
+        const jobId = `${Date.now()}-${i}`
+
+        // Kaynakları sırayla döndür
+        const source = publicSources[i % publicSources.length]
+
+        // Son başvuru tarihi (1-30 gün arası)
+        const deadline = new Date()
+        deadline.setDate(deadline.getDate() + Math.floor(Math.random() * 30) + 1)
+
         jobs.push({
             title: template.title,
             company: getRandomElement(template.companies),
@@ -186,13 +210,22 @@ export function generateSampleJobs(count: number = 10): ScrapedJob[] {
             description: getRandomElement(template.descriptions),
             requirements: generateRequirements(template.title),
             type: 'PUBLIC',
-            sourceUrl: `https://kariyer.gov.tr/ilan/${Date.now()}-${i}`,
+            sourceUrl: source.url,
+            applicationUrl: source.url, // Başvuru linki kaynakla aynı olsun
+            salary: undefined, // Maaş kaldırıldı
+            deadline: deadline.toISOString().split('T')[0]
         })
     }
 
     // Özel sektör ilanları
     for (let i = 0; i < privateCount; i++) {
         const template = getRandomElement(privateJobTemplates)
+        const jobId = `${Date.now()}-${i}`
+
+        // Son başvuru tarihi (1-45 gün arası)
+        const deadline = new Date()
+        deadline.setDate(deadline.getDate() + Math.floor(Math.random() * 45) + 1)
+
         jobs.push({
             title: template.title,
             company: getRandomElement(template.companies),
@@ -200,7 +233,10 @@ export function generateSampleJobs(count: number = 10): ScrapedJob[] {
             description: getRandomElement(template.descriptions),
             requirements: generateRequirements(template.title),
             type: 'PRIVATE',
-            sourceUrl: `https://kariyer.net/ilan/${Date.now()}-${i}`,
+            sourceUrl: 'https://www.kariyer.net/is-ilanlari',
+            applicationUrl: 'https://www.kariyer.net/is-ilanlari',
+            salary: undefined,
+            deadline: deadline.toISOString().split('T')[0]
         })
     }
 

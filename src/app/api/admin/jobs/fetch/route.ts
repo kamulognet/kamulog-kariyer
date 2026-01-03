@@ -35,6 +35,9 @@ export async function POST(request: NextRequest) {
                 requirements: job.requirements,
                 type: job.type,
                 sourceUrl: job.sourceUrl,
+                applicationUrl: job.applicationUrl,
+                salary: job.salary,
+                deadline: job.deadline ? new Date(job.deadline) : null,
             })),
         })
 

@@ -30,70 +30,72 @@ Her yanıtında:
 - Bir sonraki adım için net soru sor
 - Eksik bilgi varsa nazikçe iste
 
-Önemli: Bilgiler yeterli olduğunda, kullanıcıya "CV'niz hazır! Artık 'CV Oluştur' butonuna tıklayarak profesyonel CV'nizi oluşturabilirsiniz." şeklinde bilgi ver.`
+Önemli: Bilgiler tamamen yeterli olduğunda ve tüm adımlar tamamlandığında, son mesajının en sonuna mutlaka [CV_READY] etiketini ekle. Bu etiket sistemin CV oluşturma butonunu aktif etmesini sağlayacak.
+
+Örnek Final Mesajı: "...Verdiğiniz bilgiler için teşekkürler. CV taslağınız hazır! [CV_READY]"`
 
 // CV verisi çıkarma promptu
 export const CV_EXTRACTION_PROMPT = `Aşağıdaki chat geçmişinden CV bilgilerini extract et ve JSON formatında döndür:
 
-{
-  "personalInfo": {
-    "fullName": "",
-    "birthDate": "",
-    "email": "",
-    "phone": "",
-    "address": "",
-    "linkedIn": ""
-  },
-  "education": [
     {
-      "institution": "",
-      "degree": "",
-      "field": "",
-      "startDate": "",
-      "endDate": "",
-      "gpa": ""
+      "personalInfo": {
+        "fullName": "",
+        "birthDate": "",
+        "email": "",
+        "phone": "",
+        "address": "",
+        "linkedIn": ""
+      },
+      "education": [
+        {
+          "institution": "",
+          "degree": "",
+          "field": "",
+          "startDate": "",
+          "endDate": "",
+          "gpa": ""
+        }
+      ],
+      "experience": [
+        {
+          "company": "",
+          "position": "",
+          "startDate": "",
+          "endDate": "",
+          "description": "",
+          "responsibilities": []
+        }
+      ],
+      "skills": {
+        "technical": [],
+        "languages": [],
+        "software": []
+      },
+      "certificates": [
+        {
+          "name": "",
+          "issuer": "",
+          "date": ""
+        }
+      ],
+      "summary": ""
     }
-  ],
-  "experience": [
-    {
-      "company": "",
-      "position": "",
-      "startDate": "",
-      "endDate": "",
-      "description": "",
-      "responsibilities": []
-    }
-  ],
-  "skills": {
-    "technical": [],
-    "languages": [],
-    "software": []
-  },
-  "certificates": [
-    {
-      "name": "",
-      "issuer": "",
-      "date": ""
-    }
-  ],
-  "summary": ""
-}
 
 Sadece JSON döndür, başka bir şey yazma.`
 
 // PDF CV işleme promptu
-export const PDF_CV_PARSE_PROMPT = `Aşağıdaki metin bir CV'nin PDF'inden çıkarılmıştır. Bu metni analiz et ve yapılandırılmış CV verisi olarak döndür.
+export const PDF_CV_PARSE_PROMPT = `Aşağıdaki metin bir CV'nin PDF'inden çıkarılmıştır.Bu metni analiz et ve yapılandırılmış CV verisi olarak döndür.
 
 Aşağıdaki JSON formatını kullan:
 
 {
   "personalInfo": {
     "fullName": "",
-    "birthDate": "",
-    "email": "",
-    "phone": "",
-    "address": "",
-    "linkedIn": ""
+      "birthDate": "",
+        "email": "",
+          "phone": "",
+            "address": "",
+              "linkedIn": ""
   },
   "education": [
     {
@@ -105,20 +107,20 @@ Aşağıdaki JSON formatını kullan:
       "gpa": ""
     }
   ],
-  "experience": [
-    {
-      "company": "",
-      "position": "",
-      "startDate": "",
-      "endDate": "",
-      "description": "",
-      "responsibilities": []
-    }
-  ],
-  "skills": {
+    "experience": [
+      {
+        "company": "",
+        "position": "",
+        "startDate": "",
+        "endDate": "",
+        "description": "",
+        "responsibilities": []
+      }
+    ],
+      "skills": {
     "technical": [],
-    "languages": [],
-    "software": []
+      "languages": [],
+        "software": []
   },
   "certificates": [
     {
@@ -127,8 +129,8 @@ Aşağıdaki JSON formatını kullan:
       "date": ""
     }
   ],
-  "missingFields": [],
-  "summary": ""
+    "missingFields": [],
+      "summary": ""
 }
 
 missingFields alanına CV'de eksik olan önemli bilgileri listele (örn: "telefon numarası", "e-posta adresi", "iş deneyimi detayları" vb.)
@@ -136,11 +138,11 @@ missingFields alanına CV'de eksik olan önemli bilgileri listele (örn: "telefo
 Sadece JSON döndür, başka bir şey yazma.`
 
 // Eksik bilgi sorma promptu
-export const MISSING_INFO_PROMPT = `Sen bir kariyer danışmanısın. Kullanıcının CV'sinde bazı eksik bilgiler var. Bu eksik bilgileri nazikçe sor.
+export const MISSING_INFO_PROMPT = `Sen bir kariyer danışmanısın.Kullanıcının CV'sinde bazı eksik bilgiler var. Bu eksik bilgileri nazikçe sor.
 
-Eksik bilgiler: {missingFields}
+Eksik bilgiler: { missingFields }
 
-Kullanıcıdan bu bilgileri adım adım iste. Samimi ve profesyonel bir dil kullan.`
+Kullanıcıdan bu bilgileri adım adım iste.Samimi ve profesyonel bir dil kullan.`
 
 // Chat mesajı için tip tanımları
 export interface ChatMessage {
@@ -205,7 +207,7 @@ export async function generateCVChat(messages: ChatMessage[]): Promise<string> {
 // Chat geçmişinden CV verisi extract etme
 export async function extractCVData(chatHistory: ChatMessage[]): Promise<CVData> {
   const conversationText = chatHistory
-    .map(m => `${m.role}: ${m.content}`)
+    .map(m => `${m.role}: ${m.content} `)
     .join('\n')
 
   const response = await openai.chat.completions.create({
@@ -284,21 +286,21 @@ export async function analyzeCVCompatibility(cvData: CVData, jobListing: { title
     messages: [
       {
         role: 'system',
-        content: `Sen bir İK uzmanısın. Verilen CV verisi ile iş ilanını karşılaştırıp detaylı bir analiz yap.
+        content: `Sen bir İK uzmanısın.Verilen CV verisi ile iş ilanını karşılaştırıp detaylı bir analiz yap.
         
         Yanıtını şu JSON formatında ver:
-        {
-          "score": number (0-100 arası uyumluluk puanı),
-          "feedback": "string (genel değerlendirme, 2-3 cümle)",
-          "strengths": ["string array - adayın güçlü yönleri"],
-          "improvements": ["string array - geliştirilmesi gereken alanlar"]
-        }
+{
+  "score": number(0 - 100 arası uyumluluk puanı),
+    "feedback": "string (genel değerlendirme, 2-3 cümle)",
+      "strengths": ["string array - adayın güçlü yönleri"],
+        "improvements": ["string array - geliştirilmesi gereken alanlar"]
+}
         
         Sadece JSON döndür.`,
       },
       {
         role: 'user',
-        content: `CV Verisi: ${JSON.stringify(cvData)}\n\nİş İlanı: ${JSON.stringify(jobListing)}`,
+        content: `CV Verisi: ${JSON.stringify(cvData)} \n\nİş İlanı: ${JSON.stringify(jobListing)} `,
       },
     ],
     temperature: 0,
@@ -317,26 +319,26 @@ export async function findMatchingJobs(cvData: CVData, jobs: Array<{ id: string;
     messages: [
       {
         role: 'system',
-        content: `Sen bir kariyer eşleştirme uzmanısın. Verilen CV verisini iş ilanlarıyla karşılaştır ve en uygun ilanları bul.
+        content: `Sen bir kariyer eşleştirme uzmanısın.Verilen CV verisini iş ilanlarıyla karşılaştır ve en uygun ilanları bul.
         
-        Her ilan için uyumluluk puanı (0-100) ve kısa bir açıklama ver.
+        Her ilan için uyumluluk puanı(0 - 100) ve kısa bir açıklama ver.
         
         Yanıtını şu JSON formatında ver:
-        {
-          "matches": [
-            {
-              "jobId": "string",
-              "score": number,
-              "reason": "string (neden uygun olduğuna dair kısa açıklama)"
-            }
-          ]
-        }
+{
+  "matches": [
+    {
+      "jobId": "string",
+      "score": number,
+      "reason": "string (neden uygun olduğuna dair kısa açıklama)"
+    }
+  ]
+}
         
-        En yüksek puanlı 10 ilanı döndür. Sadece JSON döndür.`,
+        En yüksek puanlı 10 ilanı döndür.Sadece JSON döndür.`,
       },
       {
         role: 'user',
-        content: `CV Verisi: ${JSON.stringify(cvData)}\n\nİş İlanları: ${JSON.stringify(jobs)}`,
+        content: `CV Verisi: ${JSON.stringify(cvData)} \n\nİş İlanları: ${JSON.stringify(jobs)} `,
       },
     ],
     temperature: 0,

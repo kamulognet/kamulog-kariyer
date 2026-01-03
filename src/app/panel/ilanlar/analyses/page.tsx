@@ -51,7 +51,7 @@ export default function AnalysesHistoryPage() {
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <Link
-                            href="/dashboard/jobs"
+                            href="/panel/ilanlar"
                             className="flex items-center gap-2 text-slate-400 hover:text-white transition mb-4"
                         >
                             <ArrowLeft className="w-4 h-4" />
@@ -72,7 +72,7 @@ export default function AnalysesHistoryPage() {
                         <h3 className="text-xl font-semibold text-white mb-2">Henüz analiz bulunmuyor</h3>
                         <p className="text-slate-400 mb-6">İş ilanlarını inceleyerek CV'niz ile ne kadar uyumlu olduğunu test edebilirsiniz.</p>
                         <Link
-                            href="/dashboard/jobs"
+                            href="/panel/ilanlar"
                             className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition"
                         >
                             İlanları Keşfet

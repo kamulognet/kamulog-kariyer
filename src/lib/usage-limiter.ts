@@ -6,20 +6,23 @@ const LIMITS = {
         CV_CREATED: 1,
         CHAT_MESSAGE: 20,
         PDF_EXPORT: 1,
+        JOB_MATCH: 3,
     },
     BASIC: {
-        CV_CREATED: 5,
-        CHAT_MESSAGE: 100,
+        CV_CREATED: 10,
+        CHAT_MESSAGE: 200,
         PDF_EXPORT: 10,
+        JOB_MATCH: 50,
     },
     PREMIUM: {
         CV_CREATED: -1, // Sınırsız
         CHAT_MESSAGE: -1,
         PDF_EXPORT: -1,
+        JOB_MATCH: -1,
     },
 }
 
-type UsageType = 'CV_CREATED' | 'CHAT_MESSAGE' | 'PDF_EXPORT'
+type UsageType = 'CV_CREATED' | 'CHAT_MESSAGE' | 'PDF_EXPORT' | 'JOB_MATCH'
 type Plan = 'FREE' | 'BASIC' | 'PREMIUM'
 
 // Mevcut ay YYYYMM formatında

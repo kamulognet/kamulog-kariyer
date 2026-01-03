@@ -16,7 +16,7 @@ export default function LoginPage() {
     // Giriş yapmış kullanıcıları dashboard'a yönlendir
     useEffect(() => {
         if (status === 'authenticated' && session) {
-            router.replace('/dashboard')
+            router.replace('/panel')
         }
     }, [status, session, router])
 
@@ -49,7 +49,7 @@ export default function LoginPage() {
             if (result?.error) {
                 setError(result.error)
             } else {
-                router.push('/dashboard')
+                router.push('/panel')
                 router.refresh()
             }
         } catch (err) {

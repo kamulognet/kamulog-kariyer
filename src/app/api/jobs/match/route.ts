@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { matchCVWithJobs, analyzeSingleJobMatch, suggestBestJobs } from '@/lib/job-matcher'
+import { checkLimit, incrementUsage } from '@/lib/usage-limiter'
 
 // POST - CV ile iş ilanlarını eşleştir
 export async function POST(request: NextRequest) {
@@ -25,16 +26,42 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 })
         }
 
-        // Premium kontrolü veya kredi kontrolü
-        const isPremium = user.subscription?.plan === 'PREMIUM' && user.subscription?.status === 'ACTIVE'
-        const creditCost = action === 'analyze' ? 2 : 1 // Detaylı analiz daha pahalı
+        // Limit ve Kredi Kontrolü
+        const isPremium = user.subscription?.plan === 'PREMIUM'
+        const creditCost = action === 'analyze' ? 2 : 1
 
-        if (!isPremium && user.credits < creditCost) {
+        // Kullanım limitini kontrol et
+        const usageCheck = await checkLimit(session.user.id, 'JOB_MATCH')
+
+        let canProceed = false
+        let useCredit = false
+
+        if (usageCheck.allowed) {
+            // Limiti dolmamış, işlem yapabilir (kredisiz)
+            canProceed = true
+            useCredit = false
+        } else {
+            // Limiti dolmuş, kredisi varsa krediyle devam edebilir
+            if (user.credits >= creditCost) {
+                canProceed = true
+                useCredit = true
+            }
+        }
+
+        // Premium her türlü geçer
+        if (isPremium) {
+            canProceed = true
+            useCredit = false
+        }
+
+        if (!canProceed) {
             return NextResponse.json({
-                error: 'Yeterli krediniz yok',
+                error: 'İşlem limitiniz doldu ve yeterli krediniz yok',
                 credits: user.credits,
                 required: creditCost,
-            }, { status: 402 })
+                usageLimit: usageCheck.limit,
+                usageCurrent: usageCheck.current
+            }, { status: 403 })
         }
 
         // CV'yi getir
@@ -53,12 +80,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'CV verisi okunamadı' }, { status: 400 })
         }
 
-        // Krediyi düş (Premium değilse)
+        // Krediyi düş veya kullanımı artır
         if (!isPremium) {
-            await prisma.user.update({
-                where: { id: session.user.id },
-                data: { credits: { decrement: creditCost } },
-            })
+            if (useCredit) {
+                await prisma.user.update({
+                    where: { id: session.user.id },
+                    data: { credits: { decrement: creditCost } },
+                })
+            } else {
+                // Kredi kullanmıyorsa monthly limit artır
+                await incrementUsage(session.user.id, 'JOB_MATCH')
+            }
         }
 
         // Action'a göre işlem yap
@@ -102,10 +134,10 @@ export async function POST(request: NextRequest) {
                 remainingCredits: isPremium ? -1 : user.credits - creditCost,
             })
         } else if (action === 'suggest') {
-            // En uygun ilanları öner
+            // En uygun ilanları öner - Pool size artırıldı
             const jobs = await prisma.jobListing.findMany({
                 where: type && type !== 'ALL' ? { type } : undefined,
-                take: 20,
+                take: 50,
             })
 
             const suggestions = await suggestBestJobs(cvData, jobs.map(j => ({
@@ -122,7 +154,7 @@ export async function POST(request: NextRequest) {
             const suggestedJobs = suggestions
                 .map(s => {
                     const job = jobs.find(j => j.id === s.jobId)
-                    return job ? { ...job, suggestionReason: s.reason } : null
+                    return job ? { ...job, suggestionReason: s.reason, isAlternative: s.isAlternative } : null
                 })
                 .filter(Boolean)
 

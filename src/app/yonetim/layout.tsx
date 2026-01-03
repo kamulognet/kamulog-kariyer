@@ -35,7 +35,7 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
         if (status === 'unauthenticated') {
             router.push('/login')
         } else if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
-            router.push('/dashboard')
+            router.push('/panel')
         }
     }, [status, session, router])
 
@@ -101,7 +101,7 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
                 {/* Bottom Actions */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5">
                     <Link
-                        href="/dashboard"
+                        href="/panel"
                         className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"
                     >
                         <Home className="w-5 h-5" />

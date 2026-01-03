@@ -8,6 +8,7 @@ import ChatWindow from '@/components/chat/ChatWindow'
 import CVPreview from '@/components/cv/CVPreview'
 import type { ChatMessage, CVData } from '@/types'
 import { Upload, FileText, MessageCircle, Sparkles } from 'lucide-react'
+import PanelHeader from '@/components/PanelHeader'
 
 type Step = 'select' | 'chat' | 'upload' | 'preview' | 'saving'
 
@@ -23,6 +24,7 @@ export default function CVBuilderPage() {
     const [cvTitle, setCvTitle] = useState('')
     const [error, setError] = useState('')
     const [uploadProgress, setUploadProgress] = useState<string>('')
+    const [isFinished, setIsFinished] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -82,6 +84,9 @@ export default function CVBuilderPage() {
             const assistantMessage: ChatMessage = { role: 'assistant', content: data.message }
             setMessages([...newMessages, assistantMessage])
             setRemaining(data.remaining)
+            if (data.isFinished) {
+                setIsFinished(true)
+            }
         } catch (error) {
             setError('Bir hata oluştu')
         } finally {
@@ -216,67 +221,60 @@ export default function CVBuilderPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-            {/* Header */}
-            <header className="bg-slate-800/50 backdrop-blur-xl border-b border-slate-700">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center gap-4">
-                            <Link href="/dashboard" className="text-slate-400 hover:text-white transition">
-                                ← Anasayfa
+            <PanelHeader />
+
+            {/* Sub Header for page specific controls */}
+            <div className="bg-slate-800/30 border-b border-slate-700/50 backdrop-blur-md">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <Link href="/panel" className="p-2 text-slate-400 hover:text-white bg-slate-700/30 rounded-lg transition" title="Geri">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
                             </Link>
-                            <h1 className="text-xl font-bold text-white">AI CV Oluşturucu</h1>
+                            <h1 className="text-lg font-bold text-white">AI CV Oluşturucu</h1>
                         </div>
-                        <div className="flex items-center gap-4">
+
+                        <div className="flex items-center gap-3">
                             {step === 'chat' && messages.length > 3 && (
-                                <>
+                                <div className="flex items-center gap-2">
                                     <input
                                         type="text"
                                         value={cvTitle}
                                         onChange={(e) => setCvTitle(e.target.value)}
                                         placeholder="CV Başlığı"
-                                        className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="px-3 py-1.5 bg-slate-900/50 border border-slate-700 rounded-lg text-white text-sm focus:ring-1 focus:ring-blue-500 outline-none"
                                     />
                                     <button
                                         onClick={handleGenerateCV}
                                         disabled={isLoading}
-                                        className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-medium rounded-lg transition disabled:opacity-50 flex items-center gap-2"
+                                        className="px-4 py-1.5 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg transition disabled:opacity-50 flex items-center gap-2"
                                     >
                                         <Sparkles className="w-4 h-4" />
-                                        CV Oluştur
+                                        Oluştur
                                     </button>
-                                </>
+                                </div>
                             )}
                             {step === 'preview' && (
-                                <>
+                                <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setStep('chat')}
-                                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition"
+                                        className="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition"
                                     >
                                         Düzenle
                                     </button>
                                     <button
                                         onClick={handleExportPDF}
                                         disabled={isLoading}
-                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition disabled:opacity-50"
+                                        className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition"
                                     >
                                         PDF İndir
                                     </button>
-                                </>
-                            )}
-                            {step === 'select' && (
-                                <button
-                                    onClick={() => setStep('select')}
-                                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition"
-                                    disabled
-                                >
-                                    Yöntem Seçin
-                                </button>
+                                </div>
                             )}
                         </div>
                     </div>
                 </div>
-            </header>
-
+            </div>
             {/* Main */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {error && (
@@ -403,7 +401,7 @@ export default function CVBuilderPage() {
                             onGenerateCV={handleGenerateCV}
                             isLoading={isLoading}
                             remaining={remaining}
-                            showCVButton={messages.length > 4}
+                            showCVButton={isFinished}
                             cvTitle={cvTitle}
                             onCVTitleChange={setCvTitle}
                         />

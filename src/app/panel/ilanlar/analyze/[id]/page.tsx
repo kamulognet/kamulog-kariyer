@@ -17,6 +17,8 @@ interface JobListing {
     company: string
     description: string
     requirements: string | null
+    sourceUrl?: string | null
+    applicationUrl?: string | null
 }
 
 interface AnalysisResult {
@@ -35,6 +37,7 @@ export default function JobAnalyzePage() {
     const [analyzing, setAnalyzing] = useState(false)
     const [result, setResult] = useState<AnalysisResult | null>(null)
     const [loading, setLoading] = useState(true)
+    const [notification, setNotification] = useState<{ show: boolean; type: 'info' | 'error' | 'success'; message: string }>({ show: false, type: 'info', message: '' })
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -99,7 +102,7 @@ export default function JobAnalyzePage() {
         return (
             <div className="min-h-screen bg-[#0f172a] text-white p-8">
                 <p>İlan bulunamadı.</p>
-                <Link href="/dashboard/jobs" className="text-blue-400">Geri Dön</Link>
+                <Link href="/panel/ilanlar" className="text-blue-400">Geri Dön</Link>
             </div>
         )
     }
@@ -108,7 +111,7 @@ export default function JobAnalyzePage() {
         <div className="min-h-screen bg-[#0f172a] text-slate-200 py-8">
             <div className="max-w-4xl mx-auto px-4">
                 <Link
-                    href="/dashboard/jobs"
+                    href="/panel/ilanlar"
                     className="flex items-center gap-2 text-slate-400 hover:text-white transition mb-6"
                 >
                     <ArrowLeft className="w-4 h-4" />
@@ -218,6 +221,93 @@ export default function JobAnalyzePage() {
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Başvuru Butonu - Her zaman göster */}
+                            <div className="mt-6 pt-6 border-t border-slate-700 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-slate-400 text-sm">
+                                        {result.score >= 70
+                                            ? "✅ CV'niz bu ilan için uygundur. Hemen başvuru yapabilirsiniz!"
+                                            : "Analiz sonucuna rağmen yine de başvurmak ister misiniz?"}
+                                    </p>
+                                    {job.sourceUrl && (
+                                        <a
+                                            href={job.sourceUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1 transition"
+                                        >
+                                            🔎 Kaynak Sitede İlan Detaylarını Gör
+                                        </a>
+                                    )}
+                                </div>
+                                <div className="flex gap-3">
+                                    {job.applicationUrl ? (
+                                        <a
+                                            href={job.applicationUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={`px-8 py-3 font-semibold rounded-xl transition flex items-center gap-2 ${result.score >= 70
+                                                ? 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/20'
+                                                : 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-900/20'
+                                                }`}
+                                        >
+                                            🚀 {result.score >= 70 ? 'Hemen Başvur' : 'Yine de Başvur'}
+                                        </a>
+                                    ) : (
+                                        <button
+                                            onClick={() => setNotification({ show: true, type: 'info', message: 'Bu ilan için direkt başvuru linki bulunamadı. Lütfen kaynak siteyi kontrol edin.' })}
+                                            className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition flex items-center gap-2 shadow-lg shadow-blue-900/20"
+                                        >
+                                            📋 Başvuru Bilgisi Al
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Notification Modal */}
+                {notification.show && (
+                    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+                        <div className={`bg-slate-800 rounded-2xl p-6 max-w-md w-full border ${notification.type === 'error' ? 'border-red-500/50' :
+                            notification.type === 'success' ? 'border-green-500/50' :
+                                'border-blue-500/50'
+                            }`}>
+                            <div className="flex items-start gap-4">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${notification.type === 'error' ? 'bg-red-500/20' :
+                                    notification.type === 'success' ? 'bg-green-500/20' :
+                                        'bg-blue-500/20'
+                                    }`}>
+                                    {notification.type === 'error' ? (
+                                        <AlertCircle className="w-6 h-6 text-red-400" />
+                                    ) : notification.type === 'success' ? (
+                                        <CheckCircle2 className="w-6 h-6 text-green-400" />
+                                    ) : (
+                                        <AlertCircle className="w-6 h-6 text-blue-400" />
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className={`font-semibold mb-2 ${notification.type === 'error' ? 'text-red-400' :
+                                        notification.type === 'success' ? 'text-green-400' :
+                                            'text-blue-400'
+                                        }`}>
+                                        {notification.type === 'error' ? 'Hata' :
+                                            notification.type === 'success' ? 'Başarılı' :
+                                                'Bilgi'}
+                                    </h3>
+                                    <p className="text-slate-300 text-sm">
+                                        {notification.message}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setNotification({ ...notification, show: false })}
+                                className="mt-4 w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
+                            >
+                                Tamam
+                            </button>
                         </div>
                     </div>
                 )}

@@ -6,9 +6,10 @@ import { prisma } from '@/lib/prisma'
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url)
-        const type = searchParams.get('type') // PUBLIC, PRIVATE
+        const type = searchParams.get('type') // PUBLIC, PRIVATE, ALL
 
-        const where = type ? { type } : {}
+        // ALL veya boş ise tümünü getir
+        const where = (type && type !== 'ALL') ? { type } : {}
 
         const jobs = await prisma.jobListing.findMany({
             where,
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// Sadece admin ilan ekleyebilir (şimdilik manuel veya script ile eklenecek)
+// Sadece admin ilan ekleyebilir
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user || session.user.role !== 'ADMIN') {
@@ -31,11 +32,28 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json()
+
+        // Veri temizleme - boş stringleri null yap, deadline'ı DateTime formatına çevir
+        const jobData = {
+            title: body.title,
+            company: body.company,
+            location: body.location || null,
+            type: body.type || 'PRIVATE',
+            description: body.description,
+            requirements: body.requirements || null,
+            sourceUrl: body.sourceUrl || null,
+            applicationUrl: body.applicationUrl || null,
+            salary: body.salary || null,
+            deadline: body.deadline ? new Date(body.deadline) : null,
+        }
+
         const job = await prisma.jobListing.create({
-            data: body,
+            data: jobData,
         })
         return NextResponse.json({ job })
-    } catch (error) {
-        return NextResponse.json({ error: 'İlan oluşturulamadı' }, { status: 500 })
+    } catch (error: any) {
+        console.error('Job create error:', error)
+        return NextResponse.json({ error: error?.message || 'İlan oluşturulamadı' }, { status: 500 })
     }
 }
+

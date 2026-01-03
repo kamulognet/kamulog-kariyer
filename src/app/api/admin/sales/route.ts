@@ -125,11 +125,62 @@ export async function POST(request: NextRequest) {
             isUnique = !existing
         } while (!isUnique)
 
+        // 1. Abonelik oluştur veya güncelle (30 günlük)
+        const expiresAt = new Date()
+        expiresAt.setDate(expiresAt.getDate() + 30)
+
+        // Mevcut abonelik var mı kontrol et
+        const existingSubscription = await prisma.subscription.findUnique({
+            where: { userId }
+        })
+
+        let subscription
+
+        if (existingSubscription) {
+            subscription = await prisma.subscription.update({
+                where: { userId },
+                data: {
+                    plan,
+                    status: 'ACTIVE',
+                    expiresAt,
+                    orderCode: orderNumber, // Sync with sales record
+                }
+            })
+        } else {
+            subscription = await prisma.subscription.create({
+                data: {
+                    userId,
+                    plan,
+                    status: 'ACTIVE',
+                    expiresAt,
+                    orderCode: orderNumber, // Sync with sales record
+                }
+            })
+        }
+
+        // 2. Kredileri güncelle
+        let creditAmount = 0
+        if (plan === 'BASIC') creditAmount = 50
+        if (plan === 'PREMIUM') creditAmount = 1000
+
+        console.log(`[Sales API] Plan: ${plan}, Credit Amount to add: ${creditAmount} for User: ${userId}`)
+
+        if (creditAmount > 0) {
+            const updatedUser = await prisma.user.update({
+                where: { id: userId },
+                data: { credits: { increment: creditAmount } }
+            })
+            console.log(`[Sales API] User credits updated. New balance: ${updatedUser.credits}`)
+        } else {
+            console.log(`[Sales API] No credits to add for plan: ${plan}`)
+        }
+
+        // 3. Satış kaydını oluştur ve abonelikle ilişkilendir
         const sale = await prisma.salesRecord.create({
             data: {
                 orderNumber,
                 userId,
-                subscriptionId,
+                subscriptionId: subscription.id, // Abonelik ID'si eklendi
                 plan,
                 amount: parseFloat(amount),
                 paymentMethod,
@@ -197,3 +248,56 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: 'Satış kaydı güncellenirken hata oluştu' }, { status: 500 })
     }
 }
+
+// DELETE - Satış kaydını sil
+export async function DELETE(request: NextRequest) {
+    try {
+        const session = await getServerSession(authOptions)
+        if (!session || session.user.role !== 'ADMIN') {
+            return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 })
+        }
+
+        const { searchParams } = new URL(request.url)
+        const id = searchParams.get('id')
+
+        if (!id) {
+            return NextResponse.json({ error: 'ID gerekli' }, { status: 400 })
+        }
+
+        // Satış kaydını bul (log için)
+        const sale = await prisma.salesRecord.findUnique({
+            where: { id },
+            include: { user: { select: { email: true } } }
+        })
+
+        if (!sale) {
+            return NextResponse.json({ error: 'Satış kaydı bulunamadı' }, { status: 404 })
+        }
+
+        // Kaydı sil
+        await prisma.salesRecord.delete({
+            where: { id }
+        })
+
+        // Admin log
+        await prisma.adminLog.create({
+            data: {
+                adminId: session.user.id,
+                action: 'DELETE',
+                targetType: 'SALES',
+                targetId: id,
+                details: JSON.stringify({
+                    orderNumber: sale.orderNumber,
+                    userEmail: sale.user.email,
+                    amount: sale.amount
+                }),
+            }
+        })
+
+        return NextResponse.json({ message: 'Satış kaydı silindi' })
+    } catch (error) {
+        console.error('Error deleting sale:', error)
+        return NextResponse.json({ error: 'Satış kaydı silinirken hata oluştu' }, { status: 500 })
+    }
+}
+
