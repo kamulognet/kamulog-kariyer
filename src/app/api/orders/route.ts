@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
                 userId: session.user.id,
                 plan: String(plan),
                 amount: Number(amount),
-                status: 'pending',
+                status: 'PENDING',
                 orderNumber,
                 paymentMethod: 'BANK_TRANSFER'
             }

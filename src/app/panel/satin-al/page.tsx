@@ -76,6 +76,7 @@ export default function PurchasePage() {
             if (plansData.value && Array.isArray(plansData.value)) {
                 setPlans(plansData.value.filter((p: Plan) => p.price > 0))
             } else {
+                // Varsayılan planlar - /panel/abonelik ile aynı
                 setPlans([
                     { id: 'BASIC', name: 'Profesyonel Yükseliş', price: 199, features: ['Ayda 5 CV', '100 AI Mesaj', '20 AI Analiz'], popular: true },
                     { id: 'PREMIUM', name: 'Kamu Lideri', price: 399, features: ['Sınırsız CV', 'Sınırsız AI', 'Öncelikli Destek'], popular: false }
@@ -111,6 +112,7 @@ export default function PurchasePage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     plan: selectedPlan.id,
+                    planName: selectedPlan.name,
                     amount: selectedPlan.price
                 })
             })
@@ -197,8 +199,8 @@ export default function PurchasePage() {
                                     key={plan.id}
                                     onClick={() => setSelectedPlan(plan)}
                                     className={`relative p-6 rounded-2xl border-2 text-left transition-all ${selectedPlan?.id === plan.id
-                                            ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
-                                            : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                                        ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
+                                        : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
                                         }`}
                                 >
                                     {plan.popular && (
@@ -362,8 +364,8 @@ export default function PurchasePage() {
                                 onClick={handlePurchase}
                                 disabled={!canPurchase || processing}
                                 className={`w-full flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-bold text-lg transition ${canPurchase && !processing
-                                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-500/30'
-                                        : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-500/30'
+                                    : 'bg-slate-700 text-slate-400 cursor-not-allowed'
                                     }`}
                             >
                                 <Package className="w-6 h-6" />
