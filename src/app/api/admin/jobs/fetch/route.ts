@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateSampleJobs } from '@/lib/job-scraper'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // POST - Yeni ilanları çek ve kaydet
 export async function POST(request: NextRequest) {
     try {
