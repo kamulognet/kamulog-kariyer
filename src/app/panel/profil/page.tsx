@@ -272,7 +272,7 @@ export default function ProfilePage() {
                         {activeTab === 'billing' && (
                             <form onSubmit={handleUpdateProfile} className="space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-400">Adres</label>
+                                    <label className="text-sm font-medium text-slate-400">Fatura Adresi</label>
                                     <div className="relative">
                                         <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
                                         <textarea
@@ -302,26 +302,6 @@ export default function ProfilePage() {
                                             onChange={(e) => setForm({ ...form, district: e.target.value })}
                                             className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
                                             placeholder="İlçe"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-400">Vergi No / T.C. Kimlik</label>
-                                        <input
-                                            type="text"
-                                            value={form.taxNumber}
-                                            onChange={(e) => setForm({ ...form, taxNumber: e.target.value })}
-                                            className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                            placeholder="Vergi No veya T.C. Kimlik"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-slate-400">Vergi Dairesi</label>
-                                        <input
-                                            type="text"
-                                            value={form.taxOffice}
-                                            onChange={(e) => setForm({ ...form, taxOffice: e.target.value })}
-                                            className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                            placeholder="Vergi Dairesi"
                                         />
                                     </div>
                                 </div>

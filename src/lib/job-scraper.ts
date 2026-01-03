@@ -199,9 +199,9 @@ export function generateSampleJobs(count: number = 10): ScrapedJob[] {
         // Kaynakları sırayla döndür
         const source = publicSources[i % publicSources.length]
 
-        // Son başvuru tarihi (1-30 gün arası)
+        // Son başvuru tarihi (60 gün - 2 ay)
         const deadline = new Date()
-        deadline.setDate(deadline.getDate() + Math.floor(Math.random() * 30) + 1)
+        deadline.setDate(deadline.getDate() + 60)
 
         jobs.push({
             title: template.title,
@@ -222,9 +222,9 @@ export function generateSampleJobs(count: number = 10): ScrapedJob[] {
         const template = getRandomElement(privateJobTemplates)
         const jobId = `${Date.now()}-${i}`
 
-        // Son başvuru tarihi (1-45 gün arası)
+        // Son başvuru tarihi (60 gün - 2 ay)
         const deadline = new Date()
-        deadline.setDate(deadline.getDate() + Math.floor(Math.random() * 45) + 1)
+        deadline.setDate(deadline.getDate() + 60)
 
         jobs.push({
             title: template.title,
