@@ -103,24 +103,47 @@ export default function AdminUsersPage() {
         if (!editUser) return
 
         try {
+            // Only send credits if explicitly changed
+            const creditsChanged = editForm.credits !== editUser.credits
+            const planChanged = editForm.plan !== (editUser.subscription?.plan || 'FREE')
+
+            const payload: any = {
+                userId: editUser.id,
+                name: editForm.name,
+                phoneNumber: editForm.phoneNumber,
+                role: editForm.role,
+            }
+
+            // If plan changed and credits not manually changed, 
+            // don't send credits so API can add plan tokens
+            if (planChanged && !creditsChanged) {
+                payload.plan = editForm.plan
+                // Don't include credits - let API add tokens from plan
+            } else {
+                // Credits explicitly changed, send the new value
+                if (creditsChanged) {
+                    payload.credits = editForm.credits
+                }
+                if (planChanged) {
+                    payload.plan = editForm.plan
+                }
+            }
+
             const res = await fetch('/api/admin/users', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: editUser.id,
-                    name: editForm.name,
-                    phoneNumber: editForm.phoneNumber,
-                    credits: editForm.credits,
-                    role: editForm.role,
-                    plan: editForm.plan,
-                }),
+                body: JSON.stringify(payload),
             })
+
+            const data = await res.json()
 
             if (res.ok) {
                 setEditUser(null)
                 loadUsers()
+                if (data.tokensAdded) {
+                    alert(`Kullanıcı güncellendi! ${data.tokensAdded} jeton yüklendi.`)
+                }
             } else {
-                const data = await res.json()
                 alert(data.error || 'Güncelleme başarısız')
             }
         } catch (error) {
