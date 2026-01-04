@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parsePDFCV, generateMissingInfoQuestions } from '@/lib/openai'
 
+// Maksimum dosya boyutu (1GB)
+const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB in bytes
+
 // PDF dosyasını yükle ve analiz et
 export async function POST(req: NextRequest) {
     try {
@@ -23,6 +26,15 @@ export async function POST(req: NextRequest) {
         if (!file.name.toLowerCase().endsWith('.pdf')) {
             return NextResponse.json({ error: 'Sadece PDF dosyaları kabul edilir' }, { status: 400 })
         }
+
+        // Dosya boyutu kontrolü
+        if (file.size > MAX_FILE_SIZE) {
+            return NextResponse.json({
+                error: `Dosya boyutu çok büyük. Maksimum ${Math.round(MAX_FILE_SIZE / (1024 * 1024 * 1024))} GB yükleyebilirsiniz.`
+            }, { status: 400 })
+        }
+
+        console.log(`[PDF Upload] File: ${file.name}, Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`)
 
         // PDF dosyasını buffer'a çevir
         const bytes = await file.arrayBuffer()

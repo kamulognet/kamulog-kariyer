@@ -18,6 +18,13 @@ const nextConfig: NextConfig = {
 
   // Strict mode for better error catching
   reactStrictMode: true,
+
+  // Experimental features for file uploads
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '1gb',
+    },
+  },
 };
 
 export default nextConfig;
