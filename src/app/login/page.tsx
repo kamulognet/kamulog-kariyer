@@ -53,21 +53,20 @@ export default function LoginPage() {
         setLoading(true)
 
         try {
-            const res = await fetch('/api/auth/send-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+            // Bypass verification - direct login
+            const result = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
             })
 
-            const data = await res.json()
-
-            if (!res.ok) {
-                setError(data.error || 'Bir hata oluştu')
+            if (result?.error) {
+                setError('Email veya şifre hatalı')
                 return
             }
 
-            setStep('verification')
-            setResendTimer(60) // 60 saniye bekleme
+            router.push('/panel')
+            router.refresh()
         } catch (err) {
             setError('Bir hata oluştu')
         } finally {
