@@ -17,6 +17,9 @@ export interface JobMatch {
 }
 
 export interface CVData {
+    rawText?: string // PDF'den çıkarılan ham metin
+    fileName?: string
+    uploadedAt?: string
     personalInfo?: {
         fullName?: string
         email?: string
@@ -62,6 +65,49 @@ export interface JobListing {
 }
 
 /**
+ * CV verisinden özet oluşturur (rawText veya yapılandırılmış veri)
+ */
+function getCVSummary(cvData: CVData): string {
+    // Eğer rawText varsa onu kullan
+    if (cvData.rawText && cvData.rawText.length > 0) {
+        // İlk 3000 karakteri al (token limiti için)
+        return cvData.rawText.substring(0, 3000)
+    }
+
+    // Yapılandırılmış veriden özet oluştur
+    const parts: string[] = []
+
+    if (cvData.education && cvData.education.length > 0) {
+        parts.push(`Eğitim: ${cvData.education.map(e => `${e.field || ''} - ${e.institution || ''}`).join(', ')}`)
+    }
+
+    if (cvData.experience && cvData.experience.length > 0) {
+        parts.push(`Deneyim: ${cvData.experience.map(e => `${e.position || ''} - ${e.company || ''}`).join(', ')}`)
+    }
+
+    if (cvData.skills) {
+        const allSkills = [
+            ...(cvData.skills.technical || []),
+            ...(cvData.skills.languages || []),
+            ...(cvData.skills.software || [])
+        ]
+        if (allSkills.length > 0) {
+            parts.push(`Beceriler: ${allSkills.join(', ')}`)
+        }
+    }
+
+    if (cvData.certificates && cvData.certificates.length > 0) {
+        parts.push(`Sertifikalar: ${cvData.certificates.map(c => c.name).join(', ')}`)
+    }
+
+    if (cvData.summary) {
+        parts.push(`Özet: ${cvData.summary}`)
+    }
+
+    return parts.join('\n') || 'CV bilgisi mevcut değil'
+}
+
+/**
  * CV verisi ile iş ilanlarını toplu olarak eşleştirir
  */
 export async function matchCVWithJobs(
@@ -78,6 +124,8 @@ export async function matchCVWithJobs(
     if (filteredJobs.length === 0) {
         return []
     }
+
+    const cvSummary = getCVSummary(cvData)
 
     // Tüm ilanları tek seferde analiz et (maliyet optimizasyonu için)
     const response = await openai.chat.completions.create({
@@ -116,7 +164,7 @@ Sadece JSON döndür.`,
             {
                 role: 'user',
                 content: `CV Verisi:
-${JSON.stringify(cvData, null, 2)}
+${cvSummary}
 
 İş İlanları:
 ${JSON.stringify(filteredJobs.map(j => ({
@@ -172,6 +220,8 @@ export async function analyzeSingleJobMatch(
     recommendations: string[]
     feedback: string
 }> {
+    const cvSummary = getCVSummary(cvData)
+
     const response = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
@@ -193,7 +243,7 @@ Türkçe yaz, samimi ve yapıcı ol. Sadece JSON döndür.`,
             {
                 role: 'user',
                 content: `CV Verisi:
-${JSON.stringify(cvData, null, 2)}
+${cvSummary}
 
 İş İlanı:
 ${JSON.stringify(job, null, 2)}`,
@@ -216,6 +266,8 @@ export async function suggestBestJobs(
     jobs: JobListing[],
     limit: number = 5
 ): Promise<{ jobId: string; reason: string; isAlternative: boolean }[]> {
+    const cvSummary = getCVSummary(cvData)
+
     const response = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
@@ -240,13 +292,11 @@ Sadece JSON döndür.`,
             },
             {
                 role: 'user',
-                content: `CV Özeti:
-- Eğitim: ${cvData.education?.map(e => e.field).join(', ') || 'Belirtilmemiş'}
-- Deneyim: ${cvData.experience?.map(e => e.position).join(', ') || 'Belirtilmemiş'}
-- Beceriler: ${cvData.skills?.technical?.join(', ') || 'Belirtilmemiş'}
+                content: `CV Bilgisi:
+${cvSummary}
 
 İlanlar:
-${jobs.map(j => `- ${j.id}: ${j.title} (${j.company}) - ${j.type === 'PUBLIC' ? 'Kamu' : 'Özel'}`).join('\n')}`,
+${jobs.map(j => `- ${j.id}: ${j.title} (${j.company}) - ${j.type === 'PUBLIC' ? 'Kamu' : 'Özel'}\n  Açıklama: ${j.description.substring(0, 200)}...`).join('\n')}`,
             },
         ],
         temperature: 0.5,
