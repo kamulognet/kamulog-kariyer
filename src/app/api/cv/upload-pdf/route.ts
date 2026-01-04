@@ -40,17 +40,42 @@ export async function POST(req: NextRequest) {
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
 
-        // pdf-parse ile PDF'i işle
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const pdfParse = require('pdf-parse')
-        const pdfData = await pdfParse(buffer)
-        const pdfText = pdfData.text
+        // pdf-parse ile PDF'i işle (canvas rendering disabled)
+        let pdfText = ''
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const pdfParse = require('pdf-parse')
+
+            // Disable page rendering to avoid canvas/DOMMatrix issues
+            const options = {
+                // Custom page render function that doesn't use canvas
+                pagerender: function (pageData: any) {
+                    return pageData.getTextContent().then(function (textContent: any) {
+                        let text = ''
+                        for (const item of textContent.items) {
+                            text += item.str + ' '
+                        }
+                        return text
+                    })
+                }
+            }
+
+            const pdfData = await pdfParse(buffer, options)
+            pdfText = pdfData.text
+        } catch (parseError) {
+            console.error('PDF parse error:', parseError)
+            return NextResponse.json({
+                error: 'PDF dosyası okunamadı. Lütfen başka bir PDF deneyin veya metin tabanlı bir PDF yükleyin.'
+            }, { status: 400 })
+        }
 
         if (!pdfText || pdfText.trim().length < 50) {
             return NextResponse.json({
                 error: 'PDF dosyasından yeterli metin çıkarılamadı. Lütfen metin tabanlı bir PDF yükleyin.'
             }, { status: 400 })
         }
+
+        console.log(`[PDF Upload] Extracted text length: ${pdfText.length} characters`)
 
         // AI ile CV verisi çıkar
         const cvData = await parsePDFCV(pdfText)
