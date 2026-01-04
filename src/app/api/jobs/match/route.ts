@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
         const creditCost = action === 'suggest' ? tokenCosts.suggest :
             action === 'analyze' ? tokenCosts.analyze : tokenCosts.match
 
-        console.log(`[Job Match] Action: ${action}, Token cost: ${creditCost}, User credits: ${user.credits}`)
-
         // Premium kontrolü
         const isPremium = user.subscription?.plan === 'PREMIUM'
+
+        console.log(`[Job Match] Action: ${action}, Token cost: ${creditCost}, User credits: ${user.credits}, Plan: ${user.subscription?.plan || 'FREE'}, isPremium: ${isPremium}`)
 
         // Jeton kontrolü (Premium hariç herkes için)
         if (!isPremium) {
