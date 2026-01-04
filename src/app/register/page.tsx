@@ -38,7 +38,7 @@ export default function RegisterPage() {
         }
 
         if (password.length < 6) {
-            setError('Şifre en az 6 karakter olmalı')
+            setError('Şifre en az 6 karakter olmalıdır')
             return
         }
 
@@ -63,14 +63,22 @@ export default function RegisterPage() {
                 return
             }
 
-            if (data.requiresVerification) {
-                setStep('verification')
-                setResendTimer(60)
-            } else {
+            // Bypass verification - auto login
+            const result = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
+            })
+
+            if (result?.error) {
+                // Kayıt tamamlandı ama giriş başarısız, login'e yönlendir
                 router.push('/login?registered=true')
+            } else {
+                router.push('/panel')
+                router.refresh()
             }
         } catch (err) {
-            setError('Bir hata oluştu')
+            setError('Bir hata oluştu. Lütfen tekrar deneyin.')
         } finally {
             setLoading(false)
         }
@@ -161,8 +169,11 @@ export default function RegisterPage() {
                     {step === 'form' ? (
                         <form onSubmit={handleSubmit} className="space-y-5">
                             {error && (
-                                <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg text-sm">
-                                    {error}
+                                <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-start gap-3">
+                                    <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <p className="text-red-200 text-sm">{error}</p>
                                 </div>
                             )}
 

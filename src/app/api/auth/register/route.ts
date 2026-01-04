@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
-import { sendVerificationCode } from '@/services/email.service'
-import { generateVerificationCode, formatPhoneNumber } from '@/utils/helpers'
+import { formatPhoneNumber } from '@/utils/helpers'
 import { z } from 'zod'
 
 const registerSchema = z.object({
-    name: z.string().min(2, 'İsim en az 2 karakter olmalı'),
-    email: z.string().email('Geçerli bir email giriniz'),
-    password: z.string().min(6, 'Şifre en az 6 karakter olmalı'),
+    name: z.string().min(2, 'İsim en az 2 karakter olmalıdır'),
+    email: z.string().email('Geçerli bir e-posta adresi giriniz'),
+    password: z.string().min(6, 'Şifre en az 6 karakter olmalıdır'),
     phoneNumber: z.string().regex(/^[0-9]{10}$/, 'Telefon numarası 10 haneli olmalıdır (Başında 0 olmadan)'),
 })
 
@@ -33,51 +32,38 @@ export async function POST(req: NextRequest) {
         })
 
         if (existingUser) {
-            // If user exists but email not verified, resend code
-            if (!existingUser.emailVerified) {
-                const verificationCode = generateVerificationCode()
-                const verificationExpires = new Date(Date.now() + 10 * 60 * 1000)
-
-                await prisma.user.update({
-                    where: { id: existingUser.id },
-                    data: {
-                        verificationCode,
-                        verificationExpires,
-                        password: await bcrypt.hash(password, 12),
-                        name,
-                        phoneNumber: formatPhoneNumber(phoneNumber),
-                    }
-                })
-
-                const emailSent = await sendVerificationCode(email, verificationCode)
-                if (!emailSent) {
-                    return NextResponse.json(
-                        { error: 'Doğrulama kodu gönderilemedi' },
-                        { status: 500 }
-                    )
-                }
-
-                return NextResponse.json({
-                    success: true,
-                    requiresVerification: true,
-                    message: 'Doğrulama kodu email adresinize gönderildi'
-                })
+            // If user exists and email is verified
+            if (existingUser.emailVerified) {
+                return NextResponse.json(
+                    { error: 'Bu e-posta adresi zaten kullanılıyor' },
+                    { status: 400 }
+                )
             }
 
-            return NextResponse.json(
-                { error: 'Bu email adresi zaten kullanılıyor' },
-                { status: 400 }
-            )
+            // If user exists but email not verified, update and auto-verify
+            await prisma.user.update({
+                where: { id: existingUser.id },
+                data: {
+                    password: await bcrypt.hash(password, 12),
+                    name,
+                    phoneNumber: formatPhoneNumber(phoneNumber),
+                    emailVerified: new Date(), // Auto verify
+                    verificationCode: null,
+                    verificationExpires: null,
+                }
+            })
+
+            return NextResponse.json({
+                success: true,
+                requiresVerification: false,
+                message: 'Kayıt başarılı! Giriş yapabilirsiniz.'
+            })
         }
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12)
 
-        // Generate verification code
-        const verificationCode = generateVerificationCode()
-        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000)
-
-        // Create user (email not verified)
+        // Create user (email auto-verified, no verification needed)
         await prisma.user.create({
             data: {
                 name,
@@ -85,8 +71,7 @@ export async function POST(req: NextRequest) {
                 phoneNumber: formatPhoneNumber(phoneNumber),
                 password: hashedPassword,
                 role: 'USER',
-                verificationCode,
-                verificationExpires,
+                emailVerified: new Date(), // Auto verify - bypass email verification
                 subscription: {
                     create: {
                         plan: 'FREE',
@@ -96,32 +81,36 @@ export async function POST(req: NextRequest) {
             },
         })
 
-        // Send verification email
-        const emailSent = await sendVerificationCode(email, verificationCode)
-        if (!emailSent) {
-            return NextResponse.json(
-                { error: 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.' },
-                { status: 500 }
-            )
-        }
-
         return NextResponse.json({
             success: true,
-            requiresVerification: true,
-            message: 'Doğrulama kodu email adresinize gönderildi'
+            requiresVerification: false,
+            message: 'Kayıt başarılı! Giriş yapabilirsiniz.'
         })
     } catch (error: any) {
         console.error('Register error:', error)
 
         if (error?.code === 'P2002') {
+            const field = error.meta?.target?.[0]
+            if (field === 'email') {
+                return NextResponse.json(
+                    { error: 'Bu e-posta adresi zaten kayıtlı' },
+                    { status: 400 }
+                )
+            }
+            if (field === 'phoneNumber') {
+                return NextResponse.json(
+                    { error: 'Bu telefon numarası zaten kayıtlı' },
+                    { status: 400 }
+                )
+            }
             return NextResponse.json(
-                { error: 'Bu email veya telefon numarası zaten kayıtlı' },
+                { error: 'Bu bilgiler zaten kayıtlı' },
                 { status: 400 }
             )
         }
 
         return NextResponse.json(
-            { error: error?.message || 'Kayıt işlemi başarısız. Lütfen bilgilerinizi kontrol edin.' },
+            { error: 'Kayıt işlemi sırasında bir hata oluştu. Lütfen tekrar deneyin.' },
             { status: 500 }
         )
     }
