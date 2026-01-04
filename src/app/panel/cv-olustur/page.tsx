@@ -112,7 +112,7 @@ export default function CVBuilderPage() {
             const formData = new FormData()
             formData.append('pdf', file)
 
-            setUploadProgress('AI CV\'nizi analiz ediyor...')
+            setUploadProgress('CV kaydediliyor...')
             const res = await fetch('/api/cv/upload-pdf', {
                 method: 'POST',
                 body: formData,
@@ -125,24 +125,12 @@ export default function CVBuilderPage() {
                 return
             }
 
-            // Session ve CV verilerini ayarla
-            setSessionId(data.sessionId)
+            // Başarılı yükleme - kullanıcıyı bilgilendir ve yönlendir
             setCvId(data.cvId)
-            setCvData(data.cvData)
+            alert(`✅ ${data.message}\n\nDosya: ${data.fileName}\nMetin uzunluğu: ${data.textLength} karakter`)
 
-            // Eksik alanlar varsa chat'e yönlendir
-            if (data.missingFields && data.missingFields.length > 0) {
-                setMessages([
-                    {
-                        role: 'assistant',
-                        content: `PDF'niz başarıyla yüklendi ve analiz edildi! 📄\n\n${data.welcomeMessage}`
-                    }
-                ])
-                setStep('chat')
-            } else {
-                // Eksik alan yoksa direkt preview'a geç
-                setStep('preview')
-            }
+            // Panel sayfasına yönlendir
+            router.push('/panel')
         } catch (error) {
             setError('PDF yüklenirken bir hata oluştu')
         } finally {

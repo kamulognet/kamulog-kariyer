@@ -2,12 +2,11 @@ import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { parsePDFCV, generateMissingInfoQuestions } from '@/lib/openai'
 
 // Maksimum dosya boyutu (50MB)
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB in bytes
 
-// PDF dosyasını yükle ve analiz et
+// PDF dosyasını yükle (AI analizi YOK - sadece metin çıkar ve kaydet)
 export async function POST(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions)
@@ -61,59 +60,39 @@ export async function POST(req: NextRequest) {
             }, { status: 400 })
         }
 
-        console.log(`[PDF Upload] Sending ${pdfText.length} chars to OpenAI for analysis...`)
+        console.log(`[PDF Upload] Saving CV with raw text...`)
 
-        // AI ile CV verisi çıkar
-        const cvData = await parsePDFCV(pdfText)
-
-        console.log(`[PDF Upload] CV data extracted successfully`)
-
-        // Eksik alanlar varsa sorular oluştur
-        let missingQuestions = ''
-        if (cvData.missingFields && cvData.missingFields.length > 0) {
-            missingQuestions = await generateMissingInfoQuestions(cvData.missingFields)
+        // Ham metin olarak CV verisi oluştur (AI analizi YOK)
+        const cvData = {
+            rawText: pdfText,
+            fileName: file.name,
+            uploadedAt: new Date().toISOString(),
+            personalInfo: { fullName: '', email: '', phone: '', address: '', birthDate: '', linkedIn: '' },
+            education: [],
+            experience: [],
+            skills: { technical: [], languages: [], software: [] },
+            certificates: [],
+            summary: '',
         }
 
-        // Chat session oluştur ve CV verisini kaydet
-        const chatSession = await prisma.chatSession.create({
+        // CV'yi veritabanına kaydet
+        const savedCV = await prisma.cV.create({
             data: {
                 userId: session.user.id,
-                messages: JSON.stringify([
-                    {
-                        role: 'system',
-                        content: 'PDF CV yüklendi ve analiz edildi.'
-                    },
-                    {
-                        role: 'assistant',
-                        content: missingQuestions || 'CV\'niz başarıyla analiz edildi! Bilgileriniz tamamlandı. "CV Oluştur" butonuna tıklayarak profesyonel CV\'nizi oluşturabilirsiniz.'
-                    }
-                ]),
-            },
-        })
-
-        // Geçici CV verisi olarak kaydet
-        const tempCV = await prisma.cV.create({
-            data: {
-                userId: session.user.id,
-                title: 'PDF\'den Yüklenen CV',
+                title: file.name.replace('.pdf', '').replace('.PDF', ''),
                 data: JSON.stringify(cvData),
                 template: 'modern',
             },
         })
 
-        // Session'a CV'yi bağla
-        await prisma.chatSession.update({
-            where: { id: chatSession.id },
-            data: { cvId: tempCV.id },
-        })
+        console.log(`[PDF Upload] CV saved successfully with ID: ${savedCV.id}`)
 
         return NextResponse.json({
             success: true,
-            sessionId: chatSession.id,
-            cvId: tempCV.id,
-            cvData,
-            missingFields: cvData.missingFields || [],
-            welcomeMessage: missingQuestions || 'CV\'niz başarıyla analiz edildi! Bilgileriniz tamamlandı. "CV Oluştur" butonuna tıklayarak profesyonel CV\'nizi oluşturabilirsiniz.',
+            cvId: savedCV.id,
+            message: 'CV başarıyla yüklendi! İş ilanlarıyla eşleşme için "Eşleşen İlanlar" butonunu kullanabilirsiniz.',
+            fileName: file.name,
+            textLength: pdfText.length,
         })
     } catch (error) {
         console.error('PDF upload error:', error)
