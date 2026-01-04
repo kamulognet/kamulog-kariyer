@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Sparkles, ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { useToast } from '@/components/ToastProvider'
 
 interface CV {
     id: string
@@ -27,9 +28,10 @@ interface AnalysisResult {
 }
 
 export default function JobAnalyzePage() {
-    const { data: session, status, update } = useSession()
+    const { data: session, status } = useSession()
     const router = useRouter()
     const { id: jobId } = useParams()
+    const { showTokenDeduction, showError } = useToast()
 
     const [cvs, setCvs] = useState<CV[]>([])
     const [job, setJob] = useState<JobListing | null>(null)
@@ -82,8 +84,10 @@ export default function JobAnalyzePage() {
                     score: data.analysis.score,
                     feedback: data.analysis.feedback
                 })
-                // Jeton düşümünden sonra session'ı yenile
-                await update()
+                // Jeton düşümünü anlık göster
+                if (data.creditsUsed && data.remainingCredits !== undefined) {
+                    showTokenDeduction(data.creditsUsed, data.remainingCredits)
+                }
             }
         } catch (error) {
             console.error('Analysis error:', error)

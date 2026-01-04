@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Briefcase, MapPin, Building2, Search, Sparkles, Wand2, X, AlertCircle, CheckCircle2 } from 'lucide-react'
 import PanelHeader from '@/components/PanelHeader'
+import { useToast } from '@/components/ToastProvider'
 
 interface JobListing {
     id: string
@@ -34,8 +35,9 @@ interface CV {
 }
 
 export default function JobsPage() {
-    const { data: session, status, update } = useSession()
+    const { data: session, status } = useSession()
     const router = useRouter()
+    const { showTokenDeduction, showError, showInfo } = useToast()
     const [jobs, setJobs] = useState<JobListing[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('ALL')
@@ -125,23 +127,22 @@ export default function JobsPage() {
             const data = await res.json()
 
             if (!res.ok) {
+                showError(data.error || 'Eşleştirme yapılamadı')
                 setMatchError(data.error || 'Eşleştirme yapılamadı')
                 return
             }
 
-            // Jeton düşümünden sonra session'ı yenile (header'daki jeton sayısını güncelle)
-            await update()
+            // Jeton düşümünü anlık göster (toast + header güncelleme)
+            if (data.creditsUsed && data.remainingCredits !== undefined) {
+                showTokenDeduction(data.creditsUsed, data.remainingCredits)
+            }
 
             setMatchedJobs(data.suggestions || [])
 
             // Eğer uygun ilan yoksa modalı kapat ve bilgi ver
             if (!data.suggestions || data.suggestions.length === 0) {
                 setShowMatchModal(false)
-                setNotification({
-                    show: true,
-                    type: 'info',
-                    message: 'Profilinize uygun açık bir ilan bulunamadı. Lütfen ilanları takip etmeye devam edin.'
-                })
+                showInfo('Profilinize uygun açık bir ilan bulunamadı. Lütfen ilanları takip etmeye devam edin.')
             }
         } catch (error) {
             setMatchError('Bir hata oluştu')

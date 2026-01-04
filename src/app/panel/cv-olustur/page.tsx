@@ -9,12 +9,14 @@ import CVPreview from '@/components/cv/CVPreview'
 import type { ChatMessage, CVData } from '@/types'
 import { Upload, FileText, MessageCircle, Sparkles } from 'lucide-react'
 import PanelHeader from '@/components/PanelHeader'
+import { useToast } from '@/components/ToastProvider'
 
 type Step = 'select' | 'chat' | 'upload' | 'preview' | 'saving'
 
 export default function CVBuilderPage() {
-    const { data: session, status, update } = useSession()
+    const { data: session, status } = useSession()
     const router = useRouter()
+    const { showTokenDeduction, showError } = useToast()
     const [step, setStep] = useState<Step>('select')
     const [messages, setMessages] = useState<ChatMessage[]>([])
     const [sessionId, setSessionId] = useState<string | null>(null)
@@ -78,6 +80,7 @@ export default function CVBuilderPage() {
             const data = await res.json()
 
             if (!res.ok) {
+                showError(data.error || 'Mesaj gönderilemedi')
                 setError(data.error || 'Mesaj gönderilemedi')
                 return
             }
@@ -86,8 +89,10 @@ export default function CVBuilderPage() {
             setMessages([...newMessages, assistantMessage])
             setRemaining(data.remainingCredits)
 
-            // Jeton düşümünden sonra session'ı yenile
-            await update()
+            // Jeton düşümünü anlık göster
+            if (data.creditsUsed && data.remainingCredits !== undefined) {
+                showTokenDeduction(data.creditsUsed, data.remainingCredits)
+            }
 
             if (data.isFinished) {
                 setIsFinished(true)

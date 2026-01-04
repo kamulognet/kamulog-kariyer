@@ -3,11 +3,16 @@
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { User, LogOut, Shield, LayoutDashboard, FileText, Briefcase, Coins, Sparkles } from 'lucide-react'
+import { useToast } from '@/components/ToastProvider'
 
 export default function PanelHeader() {
     const { data: session } = useSession()
+    const { credits } = useToast()
 
     if (!session) return null
+
+    // Context'ten kredi alınamıyorsa session'dan al
+    const displayCredits = credits || session.user.credits || 0
 
     return (
         <header className="bg-slate-800/50 backdrop-blur-xl border-b border-slate-700 sticky top-0 z-50">
@@ -43,14 +48,14 @@ export default function PanelHeader() {
                             {/* Credits */}
                             <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1 rounded-full">
                                 <Coins className="w-3.5 h-3.5 text-yellow-500" />
-                                <span className="text-sm font-bold text-yellow-500">{session.user.credits || 0}</span>
+                                <span className="text-sm font-bold text-yellow-500 transition-all duration-300">{displayCredits}</span>
                             </div>
 
                             {/* Sub Status */}
                             {session.user.subscription?.status === 'ACTIVE' && (
                                 <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${session.user.subscription.plan === 'PREMIUM'
-                                        ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
-                                        : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                                    ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
+                                    : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
                                     }`}>
                                     <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                                     <span className="text-[10px] font-bold tracking-wider uppercase">
