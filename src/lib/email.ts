@@ -177,3 +177,67 @@ export async function sendVerificationCodeEmail(email: string, code: string): Pr
         return false
     }
 }
+
+export async function sendPasswordResetEmail(email: string, code: string): Promise<boolean> {
+    try {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+            console.log('Email not configured, skipping password reset email')
+            return false
+        }
+
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 16px; padding: 32px; }
+        .header { text-align: center; margin-bottom: 32px; }
+        .logo { font-size: 24px; font-weight: bold; color: #ef4444; }
+        .code-box { background: #ef444420; border: 1px solid #ef444440; border-radius: 12px; padding: 24px; margin: 20px 0; text-align: center; }
+        .code { font-size: 36px; font-weight: bold; color: #ef4444; letter-spacing: 8px; font-family: monospace; }
+        .info { color: #94a3b8; font-size: 14px; text-align: center; margin-top: 16px; }
+        .warning { color: #fbbf24; font-size: 14px; text-align: center; margin-top: 16px; }
+        .footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 32px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">KARİYER KAMULOG</div>
+            <p style="color: #94a3b8;">Şifre Sıfırlama</p>
+        </div>
+        
+        <p>Merhaba,</p>
+        <p>Şifrenizi sıfırlamak için aşağıdaki kodu kullanın:</p>
+        
+        <div class="code-box">
+            <div class="code">${code}</div>
+        </div>
+        
+        <p class="info">Bu kod 10 dakika içinde geçerliliğini yitirecektir.</p>
+        <p class="warning">⚠️ Eğer bu isteği siz yapmadıysanız, bu emaili görmezden gelin ve şifrenizi değiştirmeyin.</p>
+        
+        <div class="footer">
+            <p>© ${new Date().getFullYear()} Kariyer Kamulog. Tüm hakları saklıdır.</p>
+        </div>
+    </div>
+</body>
+</html>
+`
+
+        await transporter.sendMail({
+            from: `"Kariyer Kamulog" <info@kamulogkariyer.com>`,
+            to: email,
+            subject: `Şifre Sıfırlama Kodu - ${code}`,
+            html: htmlContent,
+        })
+
+        console.log('Password reset email sent to:', email)
+        return true
+    } catch (error) {
+        console.error('Error sending password reset email:', error)
+        return false
+    }
+}

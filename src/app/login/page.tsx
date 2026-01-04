@@ -232,11 +232,16 @@ export default function LoginPage() {
                                 Google ile Giriş Yap
                             </button>
 
-                            <div className="mt-6 text-center">
+                            <div className="mt-6 text-center space-y-2">
                                 <p className="text-blue-200">
                                     Hesabınız yok mu?{' '}
                                     <Link href="/register" className="text-white font-semibold hover:underline">
                                         Kayıt Ol
+                                    </Link>
+                                </p>
+                                <p>
+                                    <Link href="/sifremi-unuttum" className="text-blue-300 hover:text-white text-sm transition">
+                                        Şifremi Unuttum
                                     </Link>
                                 </p>
                             </div>

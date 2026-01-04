@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
@@ -21,12 +21,12 @@ export default function RegisterPage() {
     const [resendTimer, setResendTimer] = useState(0)
 
     // Resend timer countdown
-    useState(() => {
+    useEffect(() => {
         if (resendTimer > 0) {
             const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000)
             return () => clearTimeout(timer)
         }
-    })
+    }, [resendTimer])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
