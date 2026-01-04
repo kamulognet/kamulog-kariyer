@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Check, Zap, Star, Crown, Shield } from 'lucide-react'
+import { Check, Zap, Star, Crown, Shield, Coins } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import PanelHeader from '@/components/PanelHeader'
@@ -11,9 +11,15 @@ interface Plan {
     id: string
     name: string
     price: number
+    tokens: number
     features: string[]
     popular: boolean
     tag: string | null
+}
+
+interface UserSubscription {
+    plan: string
+    status: string
 }
 
 const iconMap: Record<string, any> = {
@@ -22,45 +28,57 @@ const iconMap: Record<string, any> = {
     PREMIUM: Crown
 }
 
-const colorMap: Record<string, string> = {
-    FREE: 'blue',
-    BASIC: 'purple',
-    PREMIUM: 'orange'
+const colorMap: Record<string, { bg: string; text: string; border: string; button: string }> = {
+    FREE: {
+        bg: 'bg-slate-500/10',
+        text: 'text-slate-400',
+        border: 'border-slate-500/30',
+        button: 'bg-slate-600 hover:bg-slate-500'
+    },
+    BASIC: {
+        bg: 'bg-purple-500/10',
+        text: 'text-purple-400',
+        border: 'border-purple-500/30',
+        button: 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500'
+    },
+    PREMIUM: {
+        bg: 'bg-orange-500/10',
+        text: 'text-orange-400',
+        border: 'border-orange-500/30',
+        button: 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400'
+    }
 }
 
 export default function SubscriptionPage() {
     const { data: session } = useSession()
     const router = useRouter()
     const [plans, setPlans] = useState<Plan[]>([])
+    const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        loadPlans()
+        loadData()
     }, [])
 
-    const loadPlans = async () => {
+    const loadData = async () => {
         try {
-            const res = await fetch('/api/admin/settings?key=subscription_plans')
-            const data = await res.json()
-            if (data.value && Array.isArray(data.value)) {
-                setPlans(data.value)
-            } else {
-                setPlans([
-                    { id: 'FREE', name: 'Kariyer Yolcusu', price: 0, features: ['Ayda 1 CV', '20 AI Mesaj'], popular: false, tag: null },
-                    { id: 'BASIC', name: 'Profesyonel Yükseliş', price: 199, features: ['Ayda 5 CV', '100 AI Mesaj', '20 AI Analiz'], popular: true, tag: 'EN POPÜLER' },
-                    { id: 'PREMIUM', name: 'Kamu Lideri', price: 399, features: ['Sınırsız CV', 'Sınırsız AI', 'Öncelikli Destek'], popular: false, tag: null }
-                ])
+            // Fetch plans from public API (same as homepage)
+            const plansRes = await fetch('/api/public/plans')
+            const plansData = await plansRes.json()
+            if (plansData.plans && Array.isArray(plansData.plans)) {
+                setPlans(plansData.plans)
+            }
+
+            // Fetch user subscription
+            const subRes = await fetch('/api/user/subscription')
+            const subData = await subRes.json()
+            if (subData.subscription) {
+                setUserSubscription(subData.subscription)
             }
         } catch (error) {
-            console.error('Error loading plans:', error)
+            console.error('Error loading data:', error)
         } finally {
             setLoading(false)
-        }
-    }
-
-    const handleUpgrade = (plan: Plan) => {
-        if (plan.price > 0) {
-            router.push('/panel/satin-al')
         }
     }
 
@@ -72,6 +90,8 @@ export default function SubscriptionPage() {
         )
     }
 
+    const currentPlan = userSubscription?.plan || 'FREE'
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
             <PanelHeader />
@@ -79,65 +99,84 @@ export default function SubscriptionPage() {
             <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <h1 className="text-4xl font-bold text-white mb-4">
-                        Kariyerinizin Kilidini <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Açın</span>
+                        Size Uygun <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">Planı Seçin</span>
                     </h1>
                     <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-                        Devlet memurluğu veya özel sektör fark etmez. Sizin için en uygun planı seçin ve hayalinizdeki işe bir adım daha yaklaşın.
+                        Kariyer hedeflerinize ulaşmak için ihtiyacınız olan tüm araçlar
                     </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {plans.map((plan) => {
                         const Icon = iconMap[plan.id] || Zap
-                        const color = colorMap[plan.id] || 'blue'
-                        const priceDisplay = plan.price === 0 ? 'Ücretsiz' : `${plan.price} TL/Ay`
+                        const colors = colorMap[plan.id] || colorMap.FREE
+                        const priceDisplay = plan.price === 0 ? 'Ücretsiz' : `${plan.price} ₺`
+                        const isCurrentPlan = currentPlan === plan.id
 
                         return (
                             <div
                                 key={plan.id}
-                                className={`relative bg-slate-800/50 backdrop-blur-xl rounded-2xl p-8 border transition-all duration-300 hover:transform hover:-translate-y-2 hover:shadow-2xl ${plan.popular
-                                    ? 'border-purple-500/50 shadow-purple-500/10 scale-105 z-10'
-                                    : 'border-slate-700 hover:border-blue-500/30'
+                                className={`relative bg-gradient-to-br ${colors.bg} to-transparent backdrop-blur-xl rounded-3xl p-8 border transition-all duration-300 hover:transform hover:-translate-y-2 hover:shadow-2xl ${plan.popular
+                                        ? 'border-purple-500/50 shadow-purple-500/20 scale-105 z-10 ring-2 ring-purple-500/50'
+                                        : isCurrentPlan
+                                            ? 'border-green-500/50 ring-2 ring-green-500/50'
+                                            : `${colors.border} hover:border-purple-500/30`
                                     }`}
                             >
-                                {plan.popular && (
+                                {plan.popular && plan.tag && (
                                     <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                                         <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
-                                            {plan.tag || 'EN POPÜLER'}
+                                            {plan.tag}
                                         </span>
                                     </div>
                                 )}
 
-                                <div className={`inline-flex p-3 rounded-xl mb-6 ${color === 'blue' ? 'bg-blue-500/10 text-blue-400' :
-                                    color === 'purple' ? 'bg-purple-500/10 text-purple-400' :
-                                        'bg-orange-500/10 text-orange-400'
-                                    }`}>
+                                {isCurrentPlan && (
+                                    <div className="absolute top-4 right-4">
+                                        <span className="bg-green-500/20 text-green-400 text-xs font-bold px-3 py-1 rounded-full border border-green-500/30">
+                                            Mevcut
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className={`inline-flex p-3 rounded-xl mb-6 ${colors.bg} ${colors.text}`}>
                                     <Icon className="w-8 h-8" />
                                 </div>
 
                                 <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
-                                <p className="text-slate-400 text-sm mb-6 h-10">Hayalinizdeki işe bir adım daha yaklaşın.</p>
+
+                                {plan.tokens > 0 && (
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Coins className="w-4 h-4 text-yellow-400" />
+                                        <span className="text-yellow-400 text-sm font-medium">{plan.tokens} Jeton</span>
+                                    </div>
+                                )}
 
                                 <div className="mb-8">
                                     <span className="text-4xl font-bold text-white">{priceDisplay}</span>
+                                    {plan.price > 0 && <span className="text-slate-400 text-sm">/ay</span>}
                                 </div>
 
-                                {plan.price === 0 ? (
+                                {isCurrentPlan ? (
+                                    <button
+                                        disabled
+                                        className="w-full py-3 px-6 rounded-xl font-bold bg-green-500/20 text-green-400 cursor-not-allowed border border-green-500/30"
+                                    >
+                                        ✓ Mevcut Plan
+                                    </button>
+                                ) : plan.price === 0 ? (
                                     <button
                                         disabled
                                         className="w-full py-3 px-6 rounded-xl font-bold bg-slate-700 text-slate-400 cursor-not-allowed"
                                     >
-                                        Mevcut Plan
+                                        Ücretsiz Plan
                                     </button>
                                 ) : (
                                     <Link
-                                        href="/panel/satin-al"
-                                        className={`w-full py-3 px-6 rounded-xl font-bold transition-all block text-center ${color === 'purple'
-                                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-900/20'
-                                            : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white shadow-lg shadow-orange-900/20'
-                                            }`}
+                                        href={`/panel/satin-al?plan=${plan.id}`}
+                                        className={`w-full py-3 px-6 rounded-xl font-bold transition-all block text-center text-white shadow-lg ${colors.button}`}
                                     >
-                                        Yükselt
+                                        Hemen Başla
                                     </Link>
                                 )}
 
@@ -145,10 +184,7 @@ export default function SubscriptionPage() {
                                     {plan.features.map((feature, idx) => (
                                         <div key={idx} className="flex items-start gap-3">
                                             <div className="mt-1">
-                                                <Check className={`w-4 h-4 ${color === 'blue' ? 'text-blue-400' :
-                                                    color === 'purple' ? 'text-purple-400' :
-                                                        'text-orange-400'
-                                                    }`} />
+                                                <Check className={`w-4 h-4 ${colors.text}`} />
                                             </div>
                                             <span className="text-slate-300 text-sm">{feature}</span>
                                         </div>
@@ -164,15 +200,14 @@ export default function SubscriptionPage() {
                         <div>
                             <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
                                 <Shield className="w-6 h-6 text-green-400" />
-                                Kurumsal Güvence
+                                Güvenli Ödeme
                             </h3>
                             <p className="text-slate-400 text-sm">
                                 Ödemeleriniz 256-bit SSL sertifikası ile korunmaktadır.
                             </p>
                         </div>
-                        <div className="flex gap-4 items-center">
-                            <img src="/visa.png" alt="Visa" className="h-8 object-contain" />
-                            <img src="/mastercard.png" alt="Mastercard" className="h-10 object-contain" />
+                        <div className="flex gap-4 items-center text-slate-500 text-sm">
+                            <span>💳 Havale/EFT ile ödeme yapabilirsiniz</span>
                         </div>
                     </div>
                 </div>
