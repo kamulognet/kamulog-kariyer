@@ -100,7 +100,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData): Promise<
 `
 
         await transporter.sendMail({
-            from: `"Kariyer Kamulog" <${process.env.SMTP_USER}>`,
+            from: `"Kariyer Kamulog" <info@kamulog.net>`,
             to: data.userEmail,
             subject: `Sipariş Onayı - ${data.orderCode}`,
             html: htmlContent,
@@ -110,6 +110,69 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData): Promise<
         return true
     } catch (error) {
         console.error('Error sending order email:', error)
+        return false
+    }
+}
+
+export async function sendVerificationCodeEmail(email: string, code: string): Promise<boolean> {
+    try {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+            console.log('Email not configured, skipping verification email')
+            return false
+        }
+
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 16px; padding: 32px; }
+        .header { text-align: center; margin-bottom: 32px; }
+        .logo { font-size: 24px; font-weight: bold; color: #a855f7; }
+        .code-box { background: #7c3aed20; border: 1px solid #7c3aed40; border-radius: 12px; padding: 24px; margin: 20px 0; text-align: center; }
+        .code { font-size: 36px; font-weight: bold; color: #a855f7; letter-spacing: 8px; font-family: monospace; }
+        .info { color: #94a3b8; font-size: 14px; text-align: center; margin-top: 16px; }
+        .footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 32px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">KARİYER KAMULOG</div>
+            <p style="color: #94a3b8;">Giriş Doğrulama Kodu</p>
+        </div>
+        
+        <p>Merhaba,</p>
+        <p>Hesabınıza giriş yapmak için aşağıdaki doğrulama kodunu kullanın:</p>
+        
+        <div class="code-box">
+            <div class="code">${code}</div>
+        </div>
+        
+        <p class="info">Bu kod 10 dakika içinde geçerliliğini yitirecektir.</p>
+        <p class="info">Eğer bu girişi siz yapmadıysanız, bu emaili görmezden gelebilirsiniz.</p>
+        
+        <div class="footer">
+            <p>© ${new Date().getFullYear()} Kariyer Kamulog. Tüm hakları saklıdır.</p>
+        </div>
+    </div>
+</body>
+</html>
+`
+
+        await transporter.sendMail({
+            from: `"Kariyer Kamulog" <info@kamulog.net>`,
+            to: email,
+            subject: `Giriş Doğrulama Kodu - ${code}`,
+            html: htmlContent,
+        })
+
+        console.log('Verification code email sent to:', email)
+        return true
+    } catch (error) {
+        console.error('Error sending verification email:', error)
         return false
     }
 }
