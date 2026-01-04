@@ -84,18 +84,18 @@ export const CV_EXTRACTION_PROMPT = `Aşağıdaki chat geçmişinden CV bilgiler
 Sadece JSON döndür, başka bir şey yazma.`
 
 // PDF CV işleme promptu
-export const PDF_CV_PARSE_PROMPT = `Aşağıdaki metin bir CV'nin PDF'inden çıkarılmıştır.Bu metni analiz et ve yapılandırılmış CV verisi olarak döndür.
+export const PDF_CV_PARSE_PROMPT = `Aşağıdaki metin bir CV'nin PDF'inden çıkarılmıştır. Bu metni analiz et ve yapılandırılmış CV verisi olarak döndür.
 
 Aşağıdaki JSON formatını kullan:
 
 {
   "personalInfo": {
     "fullName": "",
-      "birthDate": "",
-        "email": "",
-          "phone": "",
-            "address": "",
-              "linkedIn": ""
+    "birthDate": "",
+    "email": "",
+    "phone": "",
+    "address": "",
+    "linkedIn": ""
   },
   "education": [
     {
@@ -107,20 +107,20 @@ Aşağıdaki JSON formatını kullan:
       "gpa": ""
     }
   ],
-    "experience": [
-      {
-        "company": "",
-        "position": "",
-        "startDate": "",
-        "endDate": "",
-        "description": "",
-        "responsibilities": []
-      }
-    ],
-      "skills": {
+  "experience": [
+    {
+      "company": "",
+      "position": "",
+      "startDate": "",
+      "endDate": "",
+      "description": "",
+      "responsibilities": []
+    }
+  ],
+  "skills": {
     "technical": [],
-      "languages": [],
-        "software": []
+    "languages": [],
+    "software": []
   },
   "certificates": [
     {
@@ -129,20 +129,25 @@ Aşağıdaki JSON formatını kullan:
       "date": ""
     }
   ],
-    "missingFields": [],
-      "summary": ""
+  "missingFields": [],
+  "summary": ""
 }
 
-missingFields alanına CV'de eksik olan önemli bilgileri listele (örn: "telefon numarası", "e-posta adresi", "iş deneyimi detayları" vb.)
+ÖNEMLİ KURALLAR:
+- CV'deki mevcut bilgileri olduğu gibi çıkar ve ilgili alanlara yerleştir
+- "missingFields" alanını SADECE gerçekten CV'de tamamen eksik olan kritik bilgiler için kullan
+- Eğer CV yeterli bilgi içeriyorsa, "missingFields" alanını BOŞ ARRAY [] olarak bırak
+- Eksik alan tespit etmeden önce CV metnini dikkatlice analiz et
+- Küçük eksiklikler veya opsiyonel bilgiler için missingFields ekleme
 
 Sadece JSON döndür, başka bir şey yazma.`
 
 // Eksik bilgi sorma promptu
-export const MISSING_INFO_PROMPT = `Sen bir kariyer danışmanısın.Kullanıcının CV'sinde bazı eksik bilgiler var. Bu eksik bilgileri nazikçe sor.
+export const MISSING_INFO_PROMPT = `Sen bir kariyer danışmanısın. Kullanıcının CV'sinde bazı eksik bilgiler var. Bu eksik bilgileri nazikçe sor.
 
-Eksik bilgiler: { missingFields }
+Eksik bilgiler: {missingFields}
 
-Kullanıcıdan bu bilgileri adım adım iste.Samimi ve profesyonel bir dil kullan.`
+Kullanıcıdan bu bilgileri adım adım iste. Samimi ve profesyonel bir dil kullan.`
 
 // Chat mesajı için tip tanımları
 export interface ChatMessage {
