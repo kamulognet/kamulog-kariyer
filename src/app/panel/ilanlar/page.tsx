@@ -129,6 +129,9 @@ export default function JobsPage() {
                 return
             }
 
+            // Jeton düşümünden sonra sayfayı yenile (header'daki jeton sayısını güncelle)
+            router.refresh()
+
             setMatchedJobs(data.suggestions || [])
 
             // Eğer uygun ilan yoksa modalı kapat ve bilgi ver

@@ -57,28 +57,24 @@ export async function POST(request: NextRequest) {
         const creditCost = action === 'suggest' ? tokenCosts.suggest :
             action === 'analyze' ? tokenCosts.analyze : tokenCosts.match
 
-        // Premium kontrolü
-        const isPremium = user.subscription?.plan === 'PREMIUM'
+        console.log(`[Job Match] Action: ${action}, Token cost: ${creditCost}, User credits: ${user.credits}, Plan: ${user.subscription?.plan || 'FREE'}`)
 
-        console.log(`[Job Match] Action: ${action}, Token cost: ${creditCost}, User credits: ${user.credits}, Plan: ${user.subscription?.plan || 'FREE'}, isPremium: ${isPremium}`)
-
-        // Jeton kontrolü (Premium hariç herkes için)
-        if (!isPremium) {
-            if (user.credits < creditCost) {
-                return NextResponse.json({
-                    error: `Bu işlem için ${creditCost} jeton gerekiyor. Mevcut jetonunuz: ${user.credits}`,
-                    credits: user.credits,
-                    required: creditCost,
-                }, { status: 403 })
-            }
-
-            // Jetonları düş
-            await prisma.user.update({
-                where: { id: session.user.id },
-                data: { credits: { decrement: creditCost } },
-            })
-            console.log(`[Job Match] Deducted ${creditCost} tokens from user ${session.user.id}`)
+        // Jeton kontrolü - HERKESİN jetonu düşer (Premium dahil)
+        if (user.credits < creditCost) {
+            return NextResponse.json({
+                error: `Bu işlem için ${creditCost} jeton gerekiyor. Mevcut jetonunuz: ${user.credits}`,
+                credits: user.credits,
+                required: creditCost,
+            }, { status: 403 })
         }
+
+        // Jetonları düş
+        const updatedUser = await prisma.user.update({
+            where: { id: session.user.id },
+            data: { credits: { decrement: creditCost } },
+            select: { credits: true }
+        })
+        console.log(`[Job Match] Deducted ${creditCost} tokens from user ${session.user.id}. New balance: ${updatedUser.credits}`)
 
         // CV'yi getir
         const cv = await prisma.cV.findFirst({
@@ -133,8 +129,8 @@ export async function POST(request: NextRequest) {
                     company: job.company,
                     type: job.type,
                 },
-                creditsUsed: isPremium ? 0 : creditCost,
-                remainingCredits: isPremium ? -1 : user.credits - creditCost,
+                creditsUsed: creditCost,
+                remainingCredits: updatedUser.credits,
             })
         } else if (action === 'suggest') {
             // En uygun ilanları öner - Pool size artırıldı
@@ -163,8 +159,8 @@ export async function POST(request: NextRequest) {
 
             return NextResponse.json({
                 suggestions: suggestedJobs,
-                creditsUsed: isPremium ? 0 : creditCost,
-                remainingCredits: isPremium ? -1 : user.credits - creditCost,
+                creditsUsed: creditCost,
+                remainingCredits: updatedUser.credits,
             })
         } else {
             // Toplu eşleştirme
@@ -189,8 +185,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
                 matches,
                 totalJobs: jobs.length,
-                creditsUsed: isPremium ? 0 : creditCost,
-                remainingCredits: isPremium ? -1 : user.credits - creditCost,
+                creditsUsed: creditCost,
+                remainingCredits: updatedUser.credits,
             })
         }
     } catch (error) {
