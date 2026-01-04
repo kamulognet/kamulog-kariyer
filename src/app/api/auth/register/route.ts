@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { sendVerificationCodeEmail } from '@/lib/email'
 import { z } from 'zod'
 
 const registerSchema = z.object({
@@ -31,6 +32,38 @@ export async function POST(req: NextRequest) {
         })
 
         if (existingUser) {
+            // Eğer kullanıcı var ama emaili doğrulanmamışsa, doğrulama kodu gönder
+            if (!existingUser.emailVerified) {
+                const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+                const verificationExpires = new Date(Date.now() + 10 * 60 * 1000)
+
+                await prisma.user.update({
+                    where: { id: existingUser.id },
+                    data: {
+                        verificationCode,
+                        verificationExpires,
+                        // Şifreyi de güncelle (belki farklı bir şifre girmiştir)
+                        password: await bcrypt.hash(password, 12),
+                        name,
+                        phoneNumber: `+90${phoneNumber}`,
+                    }
+                })
+
+                const emailSent = await sendVerificationCodeEmail(email, verificationCode)
+                if (!emailSent) {
+                    return NextResponse.json(
+                        { error: 'Doğrulama kodu gönderilemedi' },
+                        { status: 500 }
+                    )
+                }
+
+                return NextResponse.json({
+                    success: true,
+                    requiresVerification: true,
+                    message: 'Doğrulama kodu email adresinize gönderildi'
+                })
+            }
+
             return NextResponse.json(
                 { error: 'Bu email adresi zaten kullanılıyor' },
                 { status: 400 }
@@ -40,14 +73,20 @@ export async function POST(req: NextRequest) {
         // Şifre hashleme
         const hashedPassword = await bcrypt.hash(password, 12)
 
-        // Kullanıcı oluştur
-        const user = await prisma.user.create({
+        // 6 haneli doğrulama kodu oluştur
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 dakika
+
+        // Kullanıcı oluştur (email doğrulanmamış olarak)
+        await prisma.user.create({
             data: {
                 name,
                 email,
                 phoneNumber: `+90${phoneNumber}`,
                 password: hashedPassword,
                 role: 'USER',
+                verificationCode,
+                verificationExpires,
                 subscription: {
                     create: {
                         plan: 'FREE',
@@ -55,17 +94,21 @@ export async function POST(req: NextRequest) {
                     },
                 },
             },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-            },
         })
 
+        // Doğrulama kodu gönder
+        const emailSent = await sendVerificationCodeEmail(email, verificationCode)
+        if (!emailSent) {
+            return NextResponse.json(
+                { error: 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.' },
+                { status: 500 }
+            )
+        }
+
         return NextResponse.json({
-            message: 'Kayıt başarılı',
-            user,
+            success: true,
+            requiresVerification: true,
+            message: 'Doğrulama kodu email adresinize gönderildi'
         })
     } catch (error: any) {
         console.error('Register error:', error)

@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { ToastProvider } from "@/components/ToastProvider";
+import CookieConsent from "@/components/CookieConsent";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -153,6 +154,7 @@ export default function RootLayout({
           {children}
           <WhatsAppButton />
           <ToastProvider />
+          <CookieConsent />
         </Providers>
       </body>
     </html>
