@@ -2,8 +2,25 @@ import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import openai, { generateCVChat, type ChatMessage } from '@/lib/openai'
-import { checkLimit, incrementUsage } from '@/lib/usage-limiter'
 import { prisma } from '@/lib/prisma'
+
+// Varsayılan jeton maliyeti
+const DEFAULT_CHAT_TOKEN_COST = 2
+
+// Chat jeton maliyetini admin ayarlarından al
+async function getChatTokenCost() {
+    try {
+        const setting = await prisma.siteSettings.findUnique({
+            where: { key: 'cv_chat_token_cost' }
+        })
+        if (setting?.value) {
+            return parseInt(setting.value, 10) || DEFAULT_CHAT_TOKEN_COST
+        }
+    } catch (error) {
+        console.error('Error fetching chat token cost:', error)
+    }
+    return DEFAULT_CHAT_TOKEN_COST
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -19,15 +36,31 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Messages required' }, { status: 400 })
         }
 
-        // Limit kontrolü
-        const limitCheck = await checkLimit(session.user.id, 'CHAT_MESSAGE')
-        if (!limitCheck.allowed) {
+        // Jeton maliyetini al
+        const tokenCost = await getChatTokenCost()
+
+        // Kullanıcı jeton kontrolü
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { credits: true }
+        })
+
+        if (!user || user.credits < tokenCost) {
             return NextResponse.json({
-                error: 'Aylık chat limitinize ulaştınız',
-                limit: limitCheck.limit,
-                current: limitCheck.current,
-            }, { status: 429 })
+                error: `Bu mesaj için ${tokenCost} jeton gerekiyor. Mevcut jetonunuz: ${user?.credits || 0}`,
+                credits: user?.credits || 0,
+                required: tokenCost,
+            }, { status: 403 })
         }
+
+        // Jetonları düş
+        const updatedUser = await prisma.user.update({
+            where: { id: session.user.id },
+            data: { credits: { decrement: tokenCost } },
+            select: { credits: true }
+        })
+
+        console.log(`[CV Chat] Deducted ${tokenCost} tokens from user ${session.user.id}. New balance: ${updatedUser.credits}`)
 
         // OpenAI chat
         const rawResponse = await generateCVChat(messages as ChatMessage[])
@@ -36,15 +69,12 @@ export async function POST(req: NextRequest) {
         const isFinished = rawResponse.includes('[CV_READY]')
         const response = rawResponse.replace('[CV_READY]', '').trim()
 
-        // Kullanımı artır
-        await incrementUsage(session.user.id, 'CHAT_MESSAGE')
-
         // Session'ı kaydet/güncelle
         if (sessionId) {
             await prisma.chatSession.update({
                 where: { id: sessionId },
                 data: {
-                    messages: JSON.stringify([...messages, { role: 'assistant', content: rawResponse }]), // DB'ye orijinal halini kaydet (etiketle beraber olabilir, sorun yok)
+                    messages: JSON.stringify([...messages, { role: 'assistant', content: rawResponse }]),
                     updatedAt: new Date(),
                 },
             })
@@ -53,7 +83,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             message: response,
             isFinished,
-            remaining: limitCheck.remaining - 1,
+            creditsUsed: tokenCost,
+            remainingCredits: updatedUser.credits,
         })
     } catch (error: unknown) {
         console.error('Chat error:', error)

@@ -3,7 +3,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { analyzeCVCompatibility } from '@/lib/openai'
-import { incrementUsage } from '@/lib/usage-limiter'
+
+// Varsayılan jeton maliyeti
+const DEFAULT_ANALYZE_TOKEN_COST = 5
+
+// Analiz jeton maliyetini admin ayarlarından al
+async function getAnalyzeTokenCost() {
+    try {
+        const setting = await prisma.siteSettings.findUnique({
+            where: { key: 'job_analyze_token_cost' }
+        })
+        if (setting?.value) {
+            return parseInt(setting.value, 10) || DEFAULT_ANALYZE_TOKEN_COST
+        }
+    } catch (error) {
+        console.error('Error fetching analyze token cost:', error)
+    }
+    return DEFAULT_ANALYZE_TOKEN_COST
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -18,14 +35,21 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'CV ID ve İlan ID gerekli' }, { status: 400 })
         }
 
+        // Jeton maliyetini al
+        const tokenCost = await getAnalyzeTokenCost()
+
         // Kullanıcı kredisini kontrol et
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
             select: { credits: true }
         })
 
-        if (!user || user.credits < 1) {
-            return NextResponse.json({ error: 'Yetersiz kredi. Lütfen kredi yükleyin.' }, { status: 403 })
+        if (!user || user.credits < tokenCost) {
+            return NextResponse.json({
+                error: `Bu analiz için ${tokenCost} jeton gerekiyor. Mevcut jetonunuz: ${user?.credits || 0}`,
+                credits: user?.credits || 0,
+                required: tokenCost,
+            }, { status: 403 })
         }
 
         // Verileri getir
@@ -38,6 +62,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Veri bulunamadı' }, { status: 404 })
         }
 
+        // Jetonları düş
+        const updatedUser = await prisma.user.update({
+            where: { id: session.user.id },
+            data: { credits: { decrement: tokenCost } },
+            select: { credits: true }
+        })
+
+        console.log(`[Job Analyze] Deducted ${tokenCost} tokens from user ${session.user.id}. New balance: ${updatedUser.credits}`)
+
         // AI Analizi
         const cvData = JSON.parse(cv.data)
         const analysisResult = await analyzeCVCompatibility(cvData, {
@@ -47,24 +80,22 @@ export async function POST(req: NextRequest) {
             requirements: job.requirements ?? undefined,
         })
 
-        // Transaction ile analizi kaydet ve krediyi düş
-        const [analysis] = await prisma.$transaction([
-            prisma.cVAnalysis.create({
-                data: {
-                    userId: session.user.id,
-                    cvId: cv.id,
-                    jobId: job.id,
-                    score: analysisResult.score,
-                    feedback: analysisResult.feedback,
-                },
-            }),
-            prisma.user.update({
-                where: { id: session.user.id },
-                data: { credits: { decrement: 1 } }
-            })
-        ])
+        // Analizi kaydet
+        const analysis = await prisma.cVAnalysis.create({
+            data: {
+                userId: session.user.id,
+                cvId: cv.id,
+                jobId: job.id,
+                score: analysisResult.score,
+                feedback: analysisResult.feedback,
+            },
+        })
 
-        return NextResponse.json({ analysis })
+        return NextResponse.json({
+            analysis,
+            creditsUsed: tokenCost,
+            remainingCredits: updatedUser.credits,
+        })
     } catch (error) {
         console.error('Analysis error:', error)
         return NextResponse.json({ error: 'Analiz başarısız' }, { status: 500 })

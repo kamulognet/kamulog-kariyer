@@ -13,7 +13,7 @@ import PanelHeader from '@/components/PanelHeader'
 type Step = 'select' | 'chat' | 'upload' | 'preview' | 'saving'
 
 export default function CVBuilderPage() {
-    const { data: session, status } = useSession()
+    const { data: session, status, update } = useSession()
     const router = useRouter()
     const [step, setStep] = useState<Step>('select')
     const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -84,7 +84,11 @@ export default function CVBuilderPage() {
 
             const assistantMessage: ChatMessage = { role: 'assistant', content: data.message }
             setMessages([...newMessages, assistantMessage])
-            setRemaining(data.remaining)
+            setRemaining(data.remainingCredits)
+
+            // Jeton düşümünden sonra session'ı yenile
+            await update()
+
             if (data.isFinished) {
                 setIsFinished(true)
             }

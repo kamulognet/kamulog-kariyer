@@ -27,7 +27,7 @@ interface AnalysisResult {
 }
 
 export default function JobAnalyzePage() {
-    const { data: session, status } = useSession()
+    const { data: session, status, update } = useSession()
     const router = useRouter()
     const { id: jobId } = useParams()
 
@@ -82,6 +82,8 @@ export default function JobAnalyzePage() {
                     score: data.analysis.score,
                     feedback: data.analysis.feedback
                 })
+                // Jeton düşümünden sonra session'ı yenile
+                await update()
             }
         } catch (error) {
             console.error('Analysis error:', error)
