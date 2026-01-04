@@ -3,6 +3,45 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Default token values (fallback)
+const DEFAULT_PLAN_TOKENS: Record<string, number> = {
+    FREE: 10,
+    BASIC: 100,
+    PREMIUM: 500
+}
+
+// Get plan tokens from admin settings
+async function getPlanTokens(planId: string): Promise<number> {
+    console.log(`[Sales API getPlanTokens] Looking for plan: ${planId}`)
+
+    try {
+        const setting = await prisma.siteSettings.findUnique({
+            where: { key: 'subscription_plans' }
+        })
+
+        console.log(`[Sales API getPlanTokens] SiteSettings found: ${!!setting}`)
+
+        if (setting?.value) {
+            const plans = JSON.parse(setting.value)
+            console.log(`[Sales API getPlanTokens] Parsed plans count: ${plans.length}`)
+
+            const plan = plans.find((p: any) => p.id === planId)
+            console.log(`[Sales API getPlanTokens] Found plan for ${planId}:`, plan ? `tokens=${plan.tokens}` : 'NOT FOUND')
+
+            if (plan?.tokens !== undefined && plan.tokens !== null) {
+                console.log(`[Sales API getPlanTokens] Returning tokens from settings: ${plan.tokens}`)
+                return plan.tokens
+            }
+        }
+    } catch (error) {
+        console.error('[Sales API getPlanTokens] Error:', error)
+    }
+
+    const fallbackTokens = DEFAULT_PLAN_TOKENS[planId] || 0
+    console.log(`[Sales API getPlanTokens] Using fallback tokens for ${planId}: ${fallbackTokens}`)
+    return fallbackTokens
+}
+
 // Random sipariş numarası oluştur: KK-XXXXXX
 function generateOrderNumber(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Karışıklığı önlemek için I, O, 1, 0 çıkarıldı
@@ -158,12 +197,10 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        // 2. Kredileri güncelle
-        let creditAmount = 0
-        if (plan === 'BASIC') creditAmount = 50
-        if (plan === 'PREMIUM') creditAmount = 1000
+        // 2. Kredileri güncelle (admin ayarlarından al)
+        const creditAmount = await getPlanTokens(plan)
 
-        console.log(`[Sales API] Plan: ${plan}, Credit Amount to add: ${creditAmount} for User: ${userId}`)
+        console.log(`[Sales API] Plan: ${plan}, Credit Amount from settings: ${creditAmount} for User: ${userId}`)
 
         if (creditAmount > 0) {
             const updatedUser = await prisma.user.update({
@@ -347,10 +384,8 @@ async function activateSubscription(userId: string, plan: string, orderNumber: s
         })
     }
 
-    // 2. Kredileri güncelle
-    let creditAmount = 0
-    if (plan === 'BASIC') creditAmount = 50
-    if (plan === 'PREMIUM') creditAmount = 1000
+    // 2. Kredileri güncelle (admin ayarlarından al)
+    const creditAmount = await getPlanTokens(plan)
 
     if (creditAmount > 0) {
         await prisma.user.update({
@@ -359,7 +394,7 @@ async function activateSubscription(userId: string, plan: string, orderNumber: s
         })
     }
 
-    console.log(`[Sales API] Subscription activated for user ${userId}, plan: ${plan}, credits: ${creditAmount}`)
+    console.log(`[Sales API] Subscription activated for user ${userId}, plan: ${plan}, credits from settings: ${creditAmount}`)
 }
 
 // DELETE - Satış kaydını sil
