@@ -34,7 +34,7 @@ interface CV {
 }
 
 export default function JobsPage() {
-    const { data: session, status } = useSession()
+    const { data: session, status, update } = useSession()
     const router = useRouter()
     const [jobs, setJobs] = useState<JobListing[]>([])
     const [loading, setLoading] = useState(true)
@@ -129,8 +129,8 @@ export default function JobsPage() {
                 return
             }
 
-            // Jeton düşümünden sonra sayfayı yenile (header'daki jeton sayısını güncelle)
-            router.refresh()
+            // Jeton düşümünden sonra session'ı yenile (header'daki jeton sayısını güncelle)
+            await update()
 
             setMatchedJobs(data.suggestions || [])
 
