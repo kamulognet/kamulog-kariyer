@@ -100,7 +100,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData): Promise<
 `
 
         await transporter.sendMail({
-            from: `"Kariyer Kamulog" <info@kamulog.net>`,
+            from: `"Kariyer Kamulog" <info@kamulogkariyer.com>`,
             to: data.userEmail,
             subject: `Sipariş Onayı - ${data.orderCode}`,
             html: htmlContent,
@@ -163,7 +163,7 @@ export async function sendVerificationCodeEmail(email: string, code: string): Pr
 `
 
         await transporter.sendMail({
-            from: `"Kariyer Kamulog" <info@kamulog.net>`,
+            from: `"Kariyer Kamulog" <info@kamulogkariyer.com>`,
             to: email,
             subject: `Giriş Doğrulama Kodu - ${code}`,
             html: htmlContent,
