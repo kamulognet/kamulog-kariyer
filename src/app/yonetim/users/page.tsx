@@ -140,8 +140,8 @@ export default function AdminUsersPage() {
             if (res.ok) {
                 setEditUser(null)
                 loadUsers()
-                if (data.tokensAdded) {
-                    alert(`Kullanıcı güncellendi! ${data.tokensAdded} jeton yüklendi.`)
+                if (data.message) {
+                    alert(data.message)
                 }
             } else {
                 alert(data.error || 'Güncelleme başarısız')
