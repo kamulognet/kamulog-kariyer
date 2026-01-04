@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Sparkles, MessageCircle, Upload, Briefcase, Users, CheckCircle, ArrowRight, Zap, Shield, Target } from 'lucide-react'
+import HomePlans from '@/components/HomePlans'
 
 export default function Home() {
   return (
@@ -220,37 +221,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pricing CTA */}
-      <section className="relative z-10 py-24">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative bg-gradient-to-br from-purple-600/20 via-blue-600/20 to-cyan-600/20 border border-purple-500/30 rounded-3xl p-12 text-center backdrop-blur-sm overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
-            <div className="relative z-10">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Kariyerinize Yatırım Yapın
-              </h2>
-              <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
-                Ücretsiz plandan başlayın, ihtiyacınız oldukça yükseltin. Fiyatlandırma detayları için giriş yapın.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  href="/panel/abonelik"
-                  className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold rounded-2xl transition shadow-xl shadow-purple-500/20 flex items-center justify-center gap-2"
-                >
-                  Planları İncele
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <Link
-                  href="/register"
-                  className="px-8 py-4 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold rounded-2xl transition backdrop-blur-sm"
-                >
-                  Ücretsiz Dene
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Subscription Plans */}
+      <HomePlans />
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/5 py-12">
