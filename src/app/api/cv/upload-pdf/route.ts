@@ -40,30 +40,38 @@ export async function POST(req: NextRequest) {
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
 
-        // pdf-parse ile PDF'i işle (canvas rendering disabled)
+        // pdfjs-dist ile PDF'den metin çıkar (canvas gerektirmez)
         let pdfText = ''
         try {
             // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const pdfParse = require('pdf-parse')
+            const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.mjs')
 
-            // Disable page rendering to avoid canvas/DOMMatrix issues
-            const options = {
-                // Custom page render function that doesn't use canvas
-                pagerender: function (pageData: any) {
-                    return pageData.getTextContent().then(function (textContent: any) {
-                        let text = ''
-                        for (const item of textContent.items) {
-                            text += item.str + ' '
-                        }
-                        return text
-                    })
-                }
+            // Worker'ı devre dışı bırak (sunucu tarafı için)
+            pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+
+            const loadingTask = pdfjsLib.getDocument({
+                data: new Uint8Array(buffer),
+                useSystemFonts: true,
+                disableFontFace: true,
+            })
+
+            const pdfDoc = await loadingTask.promise
+            const textParts: string[] = []
+
+            // Her sayfadan metin çıkar
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                const page = await pdfDoc.getPage(i)
+                const textContent = await page.getTextContent()
+                const pageText = textContent.items
+                    .map((item: any) => item.str)
+                    .join(' ')
+                textParts.push(pageText)
             }
 
-            const pdfData = await pdfParse(buffer, options)
-            pdfText = pdfData.text
-        } catch (parseError) {
-            console.error('PDF parse error:', parseError)
+            pdfText = textParts.join('\n\n')
+            console.log(`[PDF Upload] Extracted ${pdfDoc.numPages} pages, ${pdfText.length} characters`)
+        } catch (parseError: any) {
+            console.error('PDF parse error:', parseError?.message || parseError)
             return NextResponse.json({
                 error: 'PDF dosyası okunamadı. Lütfen başka bir PDF deneyin veya metin tabanlı bir PDF yükleyin.'
             }, { status: 400 })
