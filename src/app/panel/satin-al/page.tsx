@@ -23,8 +23,10 @@ interface Plan {
     id: string
     name: string
     price: number
+    tokens: number
     features: string[]
     popular: boolean
+    tag: string | null
 }
 
 interface PaymentInfo {
@@ -43,6 +45,7 @@ interface OrderDetails {
     orderCode: string
     plan: string
     amount: number
+    tokens: number
     user: {
         name: string
         email: string
@@ -70,20 +73,16 @@ export default function PurchasePage() {
 
     const loadData = async () => {
         try {
+            // Fetch from same API as panel/abonelik for consistency
             const [plansRes, paymentRes] = await Promise.all([
-                fetch('/api/admin/settings?key=subscription_plans'),
+                fetch('/api/public/plans'),
                 fetch('/api/settings/payment')
             ])
 
             const plansData = await plansRes.json()
-            if (plansData.value && Array.isArray(plansData.value)) {
-                setPlans(plansData.value.filter((p: Plan) => p.price > 0))
-            } else {
-                // Varsayılan planlar - /panel/abonelik ile aynı
-                setPlans([
-                    { id: 'BASIC', name: 'Profesyonel Yükseliş', price: 199, features: ['Ayda 5 CV', '100 AI Mesaj', '20 AI Analiz'], popular: true },
-                    { id: 'PREMIUM', name: 'Kamu Lideri', price: 399, features: ['Sınırsız CV', 'Sınırsız AI', 'Öncelikli Destek'], popular: false }
-                ])
+            if (plansData.plans && Array.isArray(plansData.plans)) {
+                // Only show paid plans on purchase page
+                setPlans(plansData.plans.filter((p: Plan) => p.price > 0))
             }
 
             const paymentData = await paymentRes.json()
@@ -126,6 +125,7 @@ export default function PurchasePage() {
                     orderCode: data.order.orderCode,
                     plan: selectedPlan.name,
                     amount: selectedPlan.price,
+                    tokens: selectedPlan.tokens || 0,
                     user: {
                         name: data.order.user?.name || session.user.name || '',
                         email: data.order.user?.email || session.user.email || ''
