@@ -12,23 +12,34 @@ const DEFAULT_PLAN_TOKENS: Record<string, number> = {
 
 // Get plan tokens from settings
 async function getPlanTokens(planId: string): Promise<number> {
+    console.log(`[admin/users getPlanTokens] Looking for plan: ${planId}`)
+
     try {
         const setting = await prisma.siteSettings.findUnique({
             where: { key: 'subscription_plans' }
         })
 
+        console.log(`[admin/users getPlanTokens] SiteSettings found: ${!!setting}`)
+
         if (setting?.value) {
             const plans = JSON.parse(setting.value)
+            console.log(`[admin/users getPlanTokens] Parsed plans count: ${plans.length}`)
+
             const plan = plans.find((p: any) => p.id === planId)
-            if (plan?.tokens !== undefined) {
+            console.log(`[admin/users getPlanTokens] Found plan for ${planId}:`, plan ? `tokens=${plan.tokens}` : 'NOT FOUND')
+
+            if (plan?.tokens !== undefined && plan.tokens !== null) {
+                console.log(`[admin/users getPlanTokens] Returning tokens from settings: ${plan.tokens}`)
                 return plan.tokens
             }
         }
     } catch (error) {
-        console.error('Error fetching plan tokens:', error)
+        console.error('[admin/users getPlanTokens] Error fetching plan tokens:', error)
     }
 
-    return DEFAULT_PLAN_TOKENS[planId] || 0
+    const fallbackTokens = DEFAULT_PLAN_TOKENS[planId] || 0
+    console.log(`[admin/users getPlanTokens] Using fallback tokens for ${planId}: ${fallbackTokens}`)
+    return fallbackTokens
 }
 
 // Admin middleware

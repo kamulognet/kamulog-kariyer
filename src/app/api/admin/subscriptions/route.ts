@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// Default plans with tokens
+// Default plans with tokens (fallback when no settings found)
 const DEFAULT_PLANS = [
     { id: 'FREE', tokens: 10 },
     { id: 'BASIC', tokens: 100 },
@@ -12,25 +12,36 @@ const DEFAULT_PLANS = [
 
 // Get plan tokens from settings or default
 async function getPlanTokens(planId: string): Promise<number> {
+    console.log(`[getPlanTokens] Looking for plan: ${planId}`)
+
     try {
         const setting = await prisma.siteSettings.findUnique({
             where: { key: 'subscription_plans' }
         })
 
+        console.log(`[getPlanTokens] SiteSettings found: ${!!setting}`)
+
         if (setting?.value) {
             const plans = JSON.parse(setting.value)
+            console.log(`[getPlanTokens] Parsed plans count: ${plans.length}`)
+
             const plan = plans.find((p: any) => p.id === planId)
-            if (plan?.tokens !== undefined) {
+            console.log(`[getPlanTokens] Found plan for ${planId}:`, plan ? `tokens=${plan.tokens}` : 'NOT FOUND')
+
+            if (plan?.tokens !== undefined && plan.tokens !== null) {
+                console.log(`[getPlanTokens] Returning tokens from settings: ${plan.tokens}`)
                 return plan.tokens
             }
         }
     } catch (error) {
-        console.error('Error fetching plan tokens:', error)
+        console.error('[getPlanTokens] Error fetching plan tokens:', error)
     }
 
     // Fallback to default
     const defaultPlan = DEFAULT_PLANS.find(p => p.id === planId)
-    return defaultPlan?.tokens || 0
+    const fallbackTokens = defaultPlan?.tokens || 0
+    console.log(`[getPlanTokens] Using fallback tokens for ${planId}: ${fallbackTokens}`)
+    return fallbackTokens
 }
 
 // Admin middleware
