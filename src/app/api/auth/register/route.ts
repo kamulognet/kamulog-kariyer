@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
-import { sendVerificationCodeEmail } from '@/lib/email'
+import { sendVerificationCode } from '@/services/email.service'
+import { generateVerificationCode, formatPhoneNumber } from '@/utils/helpers'
 import { z } from 'zod'
 
 const registerSchema = z.object({
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
 
-        // Validasyon
+        // Validation
         const result = registerSchema.safeParse(body)
         if (!result.success) {
             return NextResponse.json(
@@ -26,15 +27,15 @@ export async function POST(req: NextRequest) {
 
         const { name, email, password, phoneNumber } = result.data
 
-        // Email kontrolü
+        // Check existing user
         const existingUser = await prisma.user.findUnique({
             where: { email },
         })
 
         if (existingUser) {
-            // Eğer kullanıcı var ama emaili doğrulanmamışsa, doğrulama kodu gönder
+            // If user exists but email not verified, resend code
             if (!existingUser.emailVerified) {
-                const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+                const verificationCode = generateVerificationCode()
                 const verificationExpires = new Date(Date.now() + 10 * 60 * 1000)
 
                 await prisma.user.update({
@@ -42,14 +43,13 @@ export async function POST(req: NextRequest) {
                     data: {
                         verificationCode,
                         verificationExpires,
-                        // Şifreyi de güncelle (belki farklı bir şifre girmiştir)
                         password: await bcrypt.hash(password, 12),
                         name,
-                        phoneNumber: `+90${phoneNumber}`,
+                        phoneNumber: formatPhoneNumber(phoneNumber),
                     }
                 })
 
-                const emailSent = await sendVerificationCodeEmail(email, verificationCode)
+                const emailSent = await sendVerificationCode(email, verificationCode)
                 if (!emailSent) {
                     return NextResponse.json(
                         { error: 'Doğrulama kodu gönderilemedi' },
@@ -70,19 +70,19 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        // Şifre hashleme
+        // Hash password
         const hashedPassword = await bcrypt.hash(password, 12)
 
-        // 6 haneli doğrulama kodu oluştur
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
-        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 dakika
+        // Generate verification code
+        const verificationCode = generateVerificationCode()
+        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000)
 
-        // Kullanıcı oluştur (email doğrulanmamış olarak)
+        // Create user (email not verified)
         await prisma.user.create({
             data: {
                 name,
                 email,
-                phoneNumber: `+90${phoneNumber}`,
+                phoneNumber: formatPhoneNumber(phoneNumber),
                 password: hashedPassword,
                 role: 'USER',
                 verificationCode,
@@ -96,8 +96,8 @@ export async function POST(req: NextRequest) {
             },
         })
 
-        // Doğrulama kodu gönder
-        const emailSent = await sendVerificationCodeEmail(email, verificationCode)
+        // Send verification email
+        const emailSent = await sendVerificationCode(email, verificationCode)
         if (!emailSent) {
             return NextResponse.json(
                 { error: 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.' },
@@ -112,10 +112,7 @@ export async function POST(req: NextRequest) {
         })
     } catch (error: any) {
         console.error('Register error:', error)
-        console.error('Error message:', error?.message)
-        console.error('Error code:', error?.code)
 
-        // Prisma unique constraint error
         if (error?.code === 'P2002') {
             return NextResponse.json(
                 { error: 'Bu email veya telefon numarası zaten kayıtlı' },

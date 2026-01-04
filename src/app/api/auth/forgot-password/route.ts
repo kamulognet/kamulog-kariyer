@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { sendPasswordResetEmail } from '@/lib/email'
+import { sendPasswordReset } from '@/services/email.service'
+import { generateVerificationCode } from '@/utils/helpers'
 
 export async function POST(request: NextRequest) {
     try {
@@ -13,12 +14,12 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Kullanıcıyı bul
+        // Find user
         const user = await prisma.user.findUnique({
             where: { email }
         })
 
-        // Güvenlik için kullanıcı bulunamasa bile başarılı mesajı ver
+        // Security: Always return success even if user not found
         if (!user) {
             return NextResponse.json({
                 success: true,
@@ -26,13 +27,11 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        // 6 haneli sıfırlama kodu oluştur
-        const resetCode = Math.floor(100000 + Math.random() * 900000).toString()
+        // Generate reset code
+        const resetCode = generateVerificationCode()
+        const resetExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-        // 10 dakika geçerlilik süresi
-        const resetExpires = new Date(Date.now() + 10 * 60 * 1000)
-
-        // Kodu veritabanına kaydet
+        // Save code to database
         await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -41,8 +40,8 @@ export async function POST(request: NextRequest) {
             }
         })
 
-        // Email gönder
-        const emailSent = await sendPasswordResetEmail(email, resetCode)
+        // Send reset email
+        const emailSent = await sendPasswordReset(email, resetCode)
 
         if (!emailSent) {
             return NextResponse.json(

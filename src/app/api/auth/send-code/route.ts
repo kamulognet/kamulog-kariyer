@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { sendVerificationCodeEmail } from '@/lib/email'
+import { sendVerificationCode } from '@/services/email.service'
+import { generateVerificationCode } from '@/utils/helpers'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
@@ -14,34 +15,32 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Kullanıcıyı bul
+        // Find user
         const user = await prisma.user.findUnique({
             where: { email }
         })
 
-        if (!user) {
+        if (!user || !user.password) {
             return NextResponse.json(
-                { error: 'Kullanıcı bulunamadı' },
-                { status: 404 }
-            )
-        }
-
-        // Şifre kontrolü
-        const isPasswordValid = await bcrypt.compare(password, user.password)
-        if (!isPasswordValid) {
-            return NextResponse.json(
-                { error: 'Hatalı şifre' },
+                { error: 'Email veya şifre hatalı' },
                 { status: 401 }
             )
         }
 
-        // 6 haneli doğrulama kodu oluştur
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+        // Verify password
+        const isValidPassword = await bcrypt.compare(password, user.password)
+        if (!isValidPassword) {
+            return NextResponse.json(
+                { error: 'Email veya şifre hatalı' },
+                { status: 401 }
+            )
+        }
 
-        // 10 dakika geçerlilik süresi
-        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000)
+        // Generate verification code
+        const verificationCode = generateVerificationCode()
+        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-        // Kodu veritabanına kaydet
+        // Save code to database
         await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -50,8 +49,8 @@ export async function POST(request: NextRequest) {
             }
         })
 
-        // Email gönder
-        const emailSent = await sendVerificationCodeEmail(email, verificationCode)
+        // Send verification email
+        const emailSent = await sendVerificationCode(email, verificationCode)
 
         if (!emailSent) {
             return NextResponse.json(
@@ -64,6 +63,7 @@ export async function POST(request: NextRequest) {
             success: true,
             message: 'Doğrulama kodu email adresinize gönderildi'
         })
+
     } catch (error) {
         console.error('Send code error:', error)
         return NextResponse.json(
