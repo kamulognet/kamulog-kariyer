@@ -1,55 +1,78 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Cookie, X } from 'lucide-react'
 
 export default function CookieConsent() {
-    const [showBanner, setShowBanner] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
+    const [consentText, setConsentText] = useState('')
 
     useEffect(() => {
-        // LocalStorage'dan cookie onayını kontrol et
+        // Check if user already made a choice
         const consent = localStorage.getItem('cookie-consent')
         if (!consent) {
-            setShowBanner(true)
+            setIsVisible(true)
         }
+
+        // Load custom consent text from admin settings
+        loadConsentText()
     }, [])
+
+    const loadConsentText = async () => {
+        try {
+            const res = await fetch('/api/settings/pages')
+            const data = await res.json()
+            if (data.cookieConsent) {
+                setConsentText(data.cookieConsent)
+            }
+        } catch (error) {
+            console.error('Error loading cookie consent text:', error)
+        }
+    }
 
     const handleAccept = () => {
         localStorage.setItem('cookie-consent', 'accepted')
-        setShowBanner(false)
+        setIsVisible(false)
     }
 
     const handleReject = () => {
         localStorage.setItem('cookie-consent', 'rejected')
-        setShowBanner(false)
+        setIsVisible(false)
     }
 
-    if (!showBanner) return null
+    if (!isVisible) return null
+
+    const defaultText = 'Bu web sitesi, deneyiminizi geliştirmek için çerezler kullanmaktadır. Sitemizi kullanmaya devam ederek çerez politikamızı kabul etmiş olursunuz.'
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-slate-900/95 backdrop-blur-lg border-t border-white/10 shadow-2xl">
-            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-center sm:text-left">
-                    <p className="text-white text-sm">
-                        🍪 Bu site çerezleri kullanmaktadır. Siteyi kullanarak{' '}
-                        <a href="/gizlilik" className="text-blue-400 hover:underline">
-                            gizlilik politikamızı
-                        </a>{' '}
-                        kabul etmiş olursunuz.
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleReject}
-                        className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white border border-slate-600 hover:border-slate-500 rounded-lg transition"
-                    >
-                        Reddet
-                    </button>
-                    <button
-                        onClick={handleAccept}
-                        className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-lg shadow-lg transition"
-                    >
-                        Kabul Et
-                    </button>
+        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6">
+            <div className="max-w-4xl mx-auto bg-slate-800/95 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                    <div className="flex-shrink-0 p-3 bg-purple-500/20 rounded-xl">
+                        <Cookie className="w-6 h-6 text-purple-400" />
+                    </div>
+
+                    <div className="flex-1">
+                        <h3 className="text-white font-semibold mb-1">Çerez Kullanımı</h3>
+                        <p className="text-slate-400 text-sm">
+                            {consentText || defaultText}
+                        </p>
+                    </div>
+
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <button
+                            onClick={handleReject}
+                            className="flex-1 md:flex-none px-4 py-2 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-700 transition text-sm"
+                        >
+                            Reddet
+                        </button>
+                        <button
+                            onClick={handleAccept}
+                            className="flex-1 md:flex-none px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition text-sm font-medium"
+                        >
+                            Kabul Et
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

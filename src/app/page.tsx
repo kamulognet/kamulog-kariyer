@@ -263,12 +263,12 @@ export default function Home() {
               <span className="font-semibold text-white">KARİYER KAMULOG</span>
             </div>
             <div className="text-gray-500 text-sm">
-              © 2024 KARİYER KAMULOG. Tüm hakları saklıdır.
+              © {new Date().getFullYear()} KARİYER KAMULOG. Tüm hakları saklıdır.
             </div>
             <div className="flex gap-6 text-gray-400 text-sm">
-              <Link href="#" className="hover:text-white transition">Gizlilik</Link>
-              <Link href="#" className="hover:text-white transition">Kullanım Şartları</Link>
-              <Link href="#" className="hover:text-white transition">İletişim</Link>
+              <Link href="/gizlilik" className="hover:text-white transition">Gizlilik</Link>
+              <Link href="/kullanim-sartlari" className="hover:text-white transition">Kullanım Şartları</Link>
+              <Link href="/panel/abonelik" className="hover:text-white transition">Abonelik</Link>
             </div>
           </div>
         </div>

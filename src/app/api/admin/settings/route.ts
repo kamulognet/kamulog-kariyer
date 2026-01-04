@@ -9,6 +9,7 @@ const DEFAULT_SUBSCRIPTION_PLANS = [
         id: 'FREE',
         name: 'Ücretsiz',
         price: 0,
+        tokens: 10,
         features: [
             '1 CV oluşturma',
             '20 AI sohbet mesajı',
@@ -21,6 +22,7 @@ const DEFAULT_SUBSCRIPTION_PLANS = [
         id: 'BASIC',
         name: 'Plus',
         price: 79,
+        tokens: 100,
         features: [
             '10 CV oluşturma',
             '200 AI sohbet mesajı',
@@ -35,6 +37,7 @@ const DEFAULT_SUBSCRIPTION_PLANS = [
         id: 'PREMIUM',
         name: 'Premium',
         price: 149,
+        tokens: 500,
         features: [
             'Sınırsız CV oluşturma',
             'Sınırsız AI sohbet',
