@@ -3,7 +3,33 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { matchCVWithJobs, analyzeSingleJobMatch, suggestBestJobs } from '@/lib/job-matcher'
-import { checkLimit, incrementUsage } from '@/lib/usage-limiter'
+
+// Varsayılan jeton maliyetleri
+const DEFAULT_TOKEN_COSTS = {
+    suggest: 10, // BANA UYGUN İŞLER
+    analyze: 5,  // YAPAY ZEKA ANALİZİ
+    match: 5,    // Toplu eşleştirme
+}
+
+// Jeton maliyetlerini admin ayarlarından al
+async function getTokenCosts() {
+    try {
+        const setting = await prisma.siteSettings.findUnique({
+            where: { key: 'job_match_token_costs' }
+        })
+        if (setting?.value) {
+            const costs = JSON.parse(setting.value)
+            return {
+                suggest: costs.suggest ?? DEFAULT_TOKEN_COSTS.suggest,
+                analyze: costs.analyze ?? DEFAULT_TOKEN_COSTS.analyze,
+                match: costs.match ?? DEFAULT_TOKEN_COSTS.match,
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching token costs:', error)
+    }
+    return DEFAULT_TOKEN_COSTS
+}
 
 // POST - CV ile iş ilanlarını eşleştir
 export async function POST(request: NextRequest) {
@@ -26,42 +52,32 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 })
         }
 
-        // Limit ve Kredi Kontrolü
+        // Jeton maliyetlerini al
+        const tokenCosts = await getTokenCosts()
+        const creditCost = action === 'suggest' ? tokenCosts.suggest :
+            action === 'analyze' ? tokenCosts.analyze : tokenCosts.match
+
+        console.log(`[Job Match] Action: ${action}, Token cost: ${creditCost}, User credits: ${user.credits}`)
+
+        // Premium kontrolü
         const isPremium = user.subscription?.plan === 'PREMIUM'
-        const creditCost = action === 'analyze' ? 2 : 1
 
-        // Kullanım limitini kontrol et
-        const usageCheck = await checkLimit(session.user.id, 'JOB_MATCH')
-
-        let canProceed = false
-        let useCredit = false
-
-        if (usageCheck.allowed) {
-            // Limiti dolmamış, işlem yapabilir (kredisiz)
-            canProceed = true
-            useCredit = false
-        } else {
-            // Limiti dolmuş, kredisi varsa krediyle devam edebilir
-            if (user.credits >= creditCost) {
-                canProceed = true
-                useCredit = true
+        // Jeton kontrolü (Premium hariç herkes için)
+        if (!isPremium) {
+            if (user.credits < creditCost) {
+                return NextResponse.json({
+                    error: `Bu işlem için ${creditCost} jeton gerekiyor. Mevcut jetonunuz: ${user.credits}`,
+                    credits: user.credits,
+                    required: creditCost,
+                }, { status: 403 })
             }
-        }
 
-        // Premium her türlü geçer
-        if (isPremium) {
-            canProceed = true
-            useCredit = false
-        }
-
-        if (!canProceed) {
-            return NextResponse.json({
-                error: 'İşlem limitiniz doldu ve yeterli krediniz yok',
-                credits: user.credits,
-                required: creditCost,
-                usageLimit: usageCheck.limit,
-                usageCurrent: usageCheck.current
-            }, { status: 403 })
+            // Jetonları düş
+            await prisma.user.update({
+                where: { id: session.user.id },
+                data: { credits: { decrement: creditCost } },
+            })
+            console.log(`[Job Match] Deducted ${creditCost} tokens from user ${session.user.id}`)
         }
 
         // CV'yi getir
@@ -78,19 +94,6 @@ export async function POST(request: NextRequest) {
             cvData = JSON.parse(cv.data)
         } catch {
             return NextResponse.json({ error: 'CV verisi okunamadı' }, { status: 400 })
-        }
-
-        // Krediyi düş veya kullanımı artır
-        if (!isPremium) {
-            if (useCredit) {
-                await prisma.user.update({
-                    where: { id: session.user.id },
-                    data: { credits: { decrement: creditCost } },
-                })
-            } else {
-                // Kredi kullanmıyorsa monthly limit artır
-                await incrementUsage(session.user.id, 'JOB_MATCH')
-            }
         }
 
         // Action'a göre işlem yap
