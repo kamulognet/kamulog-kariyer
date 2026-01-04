@@ -2,15 +2,10 @@ import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { generateMissingInfoQuestions } from '@/lib/openai'
-import OpenAI from 'openai'
+import { parsePDFCV, generateMissingInfoQuestions } from '@/lib/openai'
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-})
-
-// Maksimum dosya boyutu (10MB for OpenAI)
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB in bytes
+// Maksimum dosya boyutu (50MB)
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB in bytes
 
 // PDF dosyasını yükle ve analiz et
 export async function POST(req: NextRequest) {
@@ -32,82 +27,46 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Sadece PDF dosyaları kabul edilir' }, { status: 400 })
         }
 
-        // Dosya boyutu kontrolü (OpenAI limiti)
+        // Dosya boyutu kontrolü
         if (file.size > MAX_FILE_SIZE) {
             return NextResponse.json({
-                error: `Dosya boyutu çok büyük. Maksimum 10 MB yükleyebilirsiniz.`
+                error: `Dosya boyutu çok büyük. Maksimum 50 MB yükleyebilirsiniz.`
             }, { status: 400 })
         }
 
         console.log(`[PDF Upload] File: ${file.name}, Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`)
 
-        // PDF dosyasını base64'e çevir
+        // PDF dosyasını buffer'a çevir
         const bytes = await file.arrayBuffer()
-        const base64 = Buffer.from(bytes).toString('base64')
+        const buffer = new Uint8Array(bytes)
 
-        console.log(`[PDF Upload] Sending to OpenAI for analysis...`)
-
-        // OpenAI GPT-4 ile PDF'den CV verisi çıkar (doğrudan dosya olarak)
-        let cvData: any = null
+        // unpdf ile PDF'den metin çıkar (canvas gerektirmez, pure JS)
+        let pdfText = ''
         try {
-            const response = await openai.chat.completions.create({
-                model: 'gpt-4o',
-                messages: [
-                    {
-                        role: 'system',
-                        content: `Sen bir CV analiz uzmanısın. Verilen PDF CV'sini analiz et ve aşağıdaki JSON formatında yapılandırılmış veri döndür:
-{
-  "personalInfo": { "fullName": "", "birthDate": "", "email": "", "phone": "", "address": "", "linkedIn": "" },
-  "education": [{ "institution": "", "degree": "", "field": "", "startDate": "", "endDate": "", "gpa": "" }],
-  "experience": [{ "company": "", "position": "", "startDate": "", "endDate": "", "description": "", "responsibilities": [] }],
-  "skills": { "technical": [], "languages": [], "software": [] },
-  "certificates": [{ "name": "", "issuer": "", "date": "" }],
-  "summary": "",
-  "missingFields": []
-}
-Eksik alanları "missingFields" dizisine ekle. Sadece JSON döndür, başka bir şey yazma.`
-                    },
-                    {
-                        role: 'user',
-                        content: [
-                            {
-                                type: 'file',
-                                file: {
-                                    filename: file.name,
-                                    file_data: `data:application/pdf;base64,${base64}`,
-                                },
-                            } as any,
-                            {
-                                type: 'text',
-                                text: 'Bu PDF CV dosyasını analiz et ve yapılandırılmış CV verisi olarak JSON formatında döndür.',
-                            },
-                        ],
-                    },
-                ],
-                max_tokens: 4000,
-                temperature: 0.1,
-            })
-
-            const content = response.choices[0]?.message?.content || ''
-            console.log(`[PDF Upload] OpenAI response received, length: ${content.length}`)
-
-            // JSON'u parse et
-            const jsonMatch = content.match(/\{[\s\S]*\}/)
-            if (jsonMatch) {
-                cvData = JSON.parse(jsonMatch[0])
-            } else {
-                throw new Error('OpenAI yanıtından JSON parse edilemedi')
-            }
+            const { extractText } = await import('unpdf')
+            const result = await extractText(buffer)
+            // text string veya string array olabilir
+            pdfText = Array.isArray(result.text) ? result.text.join('\n') : result.text
+            console.log(`[PDF Upload] Extracted text length: ${pdfText.length} characters`)
         } catch (parseError: any) {
             console.error('PDF parse error:', parseError?.message || parseError)
             return NextResponse.json({
-                error: 'PDF analiz edilemedi. Lütfen metin içeren bir CV yükleyin.'
+                error: 'PDF dosyası okunamadı. Lütfen metin tabanlı bir PDF yükleyin.'
             }, { status: 400 })
         }
 
-        console.log(`[PDF Upload] CV data extracted successfully`)
+        if (!pdfText || pdfText.trim().length < 50) {
+            return NextResponse.json({
+                error: 'PDF dosyasından yeterli metin çıkarılamadı. Lütfen metin tabanlı bir PDF yükleyin (taranmış/görüntü PDF desteklenmez).'
+            }, { status: 400 })
+        }
+
+        console.log(`[PDF Upload] Sending ${pdfText.length} chars to OpenAI for analysis...`)
 
         // AI ile CV verisi çıkar
+        const cvData = await parsePDFCV(pdfText)
+
+        console.log(`[PDF Upload] CV data extracted successfully`)
 
         // Eksik alanlar varsa sorular oluştur
         let missingQuestions = ''
