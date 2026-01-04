@@ -12,16 +12,18 @@ import {
     Save,
     AlertCircle,
     CheckCircle2,
-    ShieldCheck
+    ShieldCheck,
+    Crown
 } from 'lucide-react'
 import PanelHeader from '@/components/PanelHeader'
+import ProfileSubscription from '@/components/ProfileSubscription'
 
 export default function ProfilePage() {
     const { data: session, update } = useSession()
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-    const [activeTab, setActiveTab] = useState<'personal' | 'billing' | 'account'>('personal')
+    const [activeTab, setActiveTab] = useState<'personal' | 'billing' | 'subscription' | 'account'>('personal')
 
     const [form, setForm] = useState({
         name: '',
@@ -200,10 +202,10 @@ export default function ProfilePage() {
 
                 <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700 overflow-hidden">
                     {/* Tabs */}
-                    <div className="flex border-b border-slate-700">
+                    <div className="flex border-b border-slate-700 overflow-x-auto">
                         <button
                             onClick={() => setActiveTab('personal')}
-                            className={`px-6 py-4 text-sm font-medium transition flex items-center gap-2 ${activeTab === 'personal' ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5' : 'text-slate-400 hover:text-white'
+                            className={`px-6 py-4 text-sm font-medium transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'personal' ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5' : 'text-slate-400 hover:text-white'
                                 }`}
                         >
                             <User className="w-4 h-4" />
@@ -211,15 +213,23 @@ export default function ProfilePage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('billing')}
-                            className={`px-6 py-4 text-sm font-medium transition flex items-center gap-2 ${activeTab === 'billing' ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5' : 'text-slate-400 hover:text-white'
+                            className={`px-6 py-4 text-sm font-medium transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'billing' ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5' : 'text-slate-400 hover:text-white'
                                 }`}
                         >
                             <Building2 className="w-4 h-4" />
                             Fatura Bilgileri
                         </button>
                         <button
+                            onClick={() => setActiveTab('subscription')}
+                            className={`px-6 py-4 text-sm font-medium transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'subscription' ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5' : 'text-slate-400 hover:text-white'
+                                }`}
+                        >
+                            <Crown className="w-4 h-4" />
+                            Abonelik & Siparişler
+                        </button>
+                        <button
                             onClick={() => setActiveTab('account')}
-                            className={`px-6 py-4 text-sm font-medium transition flex items-center gap-2 ${activeTab === 'account' ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5' : 'text-slate-400 hover:text-white'
+                            className={`px-6 py-4 text-sm font-medium transition flex items-center gap-2 whitespace-nowrap ${activeTab === 'account' ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/5' : 'text-slate-400 hover:text-white'
                                 }`}
                         >
                             <ShieldCheck className="w-4 h-4" />
@@ -314,6 +324,10 @@ export default function ProfilePage() {
                                     {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
                                 </button>
                             </form>
+                        )}
+
+                        {activeTab === 'subscription' && (
+                            <ProfileSubscription />
                         )}
 
                         {activeTab === 'account' && (
