@@ -18,6 +18,7 @@ export default function CVBuilderPage() {
     const [step, setStep] = useState<Step>('select')
     const [messages, setMessages] = useState<ChatMessage[]>([])
     const [sessionId, setSessionId] = useState<string | null>(null)
+    const [cvId, setCvId] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [remaining, setRemaining] = useState<number | undefined>()
     const [cvData, setCvData] = useState<CVData | null>(null)
@@ -126,6 +127,7 @@ export default function CVBuilderPage() {
 
             // Session ve CV verilerini ayarla
             setSessionId(data.sessionId)
+            setCvId(data.cvId)
             setCvData(data.cvData)
 
             // Eksik alanlar varsa chat'e yönlendir
@@ -173,6 +175,7 @@ export default function CVBuilderPage() {
             }
 
             setCvData(data.cv.data)
+            setCvId(data.cv.id)
             setStep('preview')
         } catch (error) {
             setError('CV oluşturulamadı')
@@ -182,17 +185,26 @@ export default function CVBuilderPage() {
     }
 
     const handleExportPDF = async () => {
-        if (!cvData) return
+        if (!cvData || !cvId) {
+            setError('Önce CV oluşturmalısınız')
+            return
+        }
         setIsLoading(true)
+        setError('')
 
         try {
             const res = await fetch('/api/cv/export-pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cvId: sessionId }),
+                body: JSON.stringify({ cvId }),
             })
 
             const data = await res.json()
+
+            if (!res.ok) {
+                setError(data.error || 'PDF oluşturulamadı')
+                return
+            }
 
             if (data.html) {
                 // Yeni pencerede aç ve yazdır
@@ -201,7 +213,12 @@ export default function CVBuilderPage() {
                     printWindow.document.write(data.html)
                     printWindow.document.close()
                     printWindow.focus()
-                    setTimeout(() => printWindow.print(), 500)
+                    // PDF olarak kaydet mesajı ekle
+                    setTimeout(() => {
+                        printWindow.print()
+                    }, 500)
+                } else {
+                    setError('Popup engellendi. Lütfen popup engelleyiciyi devre dışı bırakın.')
                 }
             }
         } catch (error) {
