@@ -184,6 +184,8 @@ export async function PUT(req: NextRequest) {
         })
 
         // Plan güncellemesi varsa subscription'ı da güncelle
+        let tokensAdded = 0
+
         if (plan && plan !== 'FREE') {
             const existingSubscription = await prisma.subscription.findUnique({
                 where: { userId },
@@ -192,7 +194,10 @@ export async function PUT(req: NextRequest) {
             const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
             const orderCode = generateOrderCode()
 
-            // Update or create subscription (jetonlar satın alma ile yüklenir, manuel atamalarda eklenmez)
+            // Get tokens from admin plan settings
+            tokensAdded = await getPlanTokens(plan)
+
+            // Update or create subscription
             if (existingSubscription) {
                 await prisma.subscription.update({
                     where: { userId },
@@ -215,6 +220,14 @@ export async function PUT(req: NextRequest) {
                 })
             }
 
+            // Add tokens to user credits (if credits not manually set)
+            if (tokensAdded > 0 && credits === undefined) {
+                await prisma.user.update({
+                    where: { id: userId },
+                    data: { credits: { increment: tokensAdded } }
+                })
+            }
+
             // Get plan info for sales record
             let planName = plan
             let planPrice = 0
@@ -234,16 +247,16 @@ export async function PUT(req: NextRequest) {
                 console.error('Error fetching plan info:', e)
             }
 
-            // Create sales record (PENDING until payment confirmed)
+            // Create sales record (COMPLETED - admin verified)
             await prisma.salesRecord.create({
                 data: {
                     userId,
                     orderNumber: orderCode,
                     plan: planName,
                     amount: planPrice,
-                    status: 'PENDING', // Changed to PENDING - tokens added when approved
+                    status: 'COMPLETED',
                     paymentMethod: 'ADMIN',
-                    notes: `Admin tarafından atandı. Ödeme onaylandığında jetonlar yüklenecek.`
+                    notes: `Admin tarafından verildi: ${session.user.email}. ${tokensAdded} jeton yüklendi.`
                 }
             })
         } else if (plan === 'FREE') {
@@ -273,6 +286,7 @@ export async function PUT(req: NextRequest) {
                 targetId: userId,
                 details: JSON.stringify({
                     changes: { name, phoneNumber, credits, role, plan },
+                    tokensAdded,
                     updatedBy: session.user.email,
                 }),
             },
@@ -280,9 +294,10 @@ export async function PUT(req: NextRequest) {
 
         return NextResponse.json({
             user,
-            message: plan && plan !== 'FREE'
-                ? 'Kullanıcı güncellendi. Abonelik aktifleştirildi (jetonlar ödeme onayından sonra yüklenecek).'
-                : 'Kullanıcı güncellendi'
+            message: tokensAdded > 0
+                ? `Kullanıcı güncellendi ve ${tokensAdded} jeton yüklendi`
+                : 'Kullanıcı güncellendi',
+            tokensAdded
         })
     } catch (error) {
         console.error('Update user error:', error)
