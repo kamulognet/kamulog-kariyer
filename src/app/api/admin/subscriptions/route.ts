@@ -3,6 +3,36 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Default plans with tokens
+const DEFAULT_PLANS = [
+    { id: 'FREE', tokens: 10 },
+    { id: 'BASIC', tokens: 100 },
+    { id: 'PREMIUM', tokens: 500 },
+]
+
+// Get plan tokens from settings or default
+async function getPlanTokens(planId: string): Promise<number> {
+    try {
+        const setting = await prisma.siteSettings.findUnique({
+            where: { key: 'subscription_plans' }
+        })
+
+        if (setting?.value) {
+            const plans = JSON.parse(setting.value)
+            const plan = plans.find((p: any) => p.id === planId)
+            if (plan?.tokens !== undefined) {
+                return plan.tokens
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching plan tokens:', error)
+    }
+
+    // Fallback to default
+    const defaultPlan = DEFAULT_PLANS.find(p => p.id === planId)
+    return defaultPlan?.tokens || 0
+}
+
 // Admin middleware
 async function checkAdmin() {
     const session = await getServerSession(authOptions)
@@ -40,6 +70,7 @@ export async function GET(req: NextRequest) {
                             id: true,
                             name: true,
                             email: true,
+                            credits: true,
                         },
                     },
                 },
@@ -80,40 +111,66 @@ export async function POST(req: NextRequest) {
             const expiresAt = new Date()
             expiresAt.setMonth(expiresAt.getMonth() + months)
 
+            const selectedPlan = plan || 'BASIC'
+
             const subscription = await prisma.subscription.update({
                 where: { id: subscriptionId },
                 data: {
                     status: 'ACTIVE',
-                    plan: plan || 'BASIC',
+                    plan: selectedPlan,
                     expiresAt,
                 },
                 include: {
                     user: {
-                        select: { name: true, email: true },
+                        select: { name: true, email: true, credits: true },
                     },
                 },
             })
 
-            // Kredileri güncelle
-            let creditAmount = 0
-            if (subscription.plan === 'BASIC') creditAmount = 50
-            if (subscription.plan === 'PREMIUM') creditAmount = 1000
+            // Get tokens from admin plan settings
+            const tokenAmount = await getPlanTokens(selectedPlan)
 
-            if (creditAmount > 0) {
+            if (tokenAmount > 0) {
                 await prisma.user.update({
                     where: { id: subscription.userId },
-                    data: { credits: { increment: creditAmount } }
+                    data: { credits: { increment: tokenAmount } }
                 })
             }
 
+            // Log the action
+            await prisma.adminLog.create({
+                data: {
+                    adminId: session.user.id,
+                    action: 'APPROVE',
+                    targetType: 'SUBSCRIPTION',
+                    targetId: subscriptionId,
+                    details: JSON.stringify({
+                        plan: selectedPlan,
+                        tokensAdded: tokenAmount,
+                        months
+                    })
+                }
+            })
+
             return NextResponse.json({
-                message: 'Abonelik onaylandı ve krediler yüklendi',
+                message: `Abonelik onaylandı ve ${tokenAmount} jeton yüklendi`,
                 subscription,
+                tokensAdded: tokenAmount
             })
         } else {
             const subscription = await prisma.subscription.update({
                 where: { id: subscriptionId },
                 data: { status: 'CANCELLED' },
+            })
+
+            // Log the action
+            await prisma.adminLog.create({
+                data: {
+                    adminId: session.user.id,
+                    action: 'REJECT',
+                    targetType: 'SUBSCRIPTION',
+                    targetId: subscriptionId,
+                }
             })
 
             return NextResponse.json({
@@ -161,26 +218,41 @@ export async function PUT(req: NextRequest) {
             },
             include: {
                 user: {
-                    select: { name: true, email: true },
+                    select: { name: true, email: true, credits: true },
                 },
             },
         })
 
-        // Kredileri güncelle
-        let creditAmount = 0
-        if (updated.plan === 'BASIC') creditAmount = 50
-        if (updated.plan === 'PREMIUM') creditAmount = 1000
+        // Get tokens from admin plan settings
+        const tokenAmount = await getPlanTokens(plan)
 
-        if (creditAmount > 0) {
+        if (tokenAmount > 0) {
             await prisma.user.update({
                 where: { id: updated.userId },
-                data: { credits: { increment: creditAmount } }
+                data: { credits: { increment: tokenAmount } }
             })
         }
 
+        // Log the action
+        await prisma.adminLog.create({
+            data: {
+                adminId: session.user.id,
+                action: 'ACTIVATE',
+                targetType: 'SUBSCRIPTION',
+                targetId: subscription.id,
+                details: JSON.stringify({
+                    orderCode,
+                    plan,
+                    tokensAdded: tokenAmount,
+                    months
+                })
+            }
+        })
+
         return NextResponse.json({
-            message: 'Abonelik aktifleştirildi ve krediler yüklendi',
+            message: `Abonelik aktifleştirildi ve ${tokenAmount} jeton yüklendi`,
             subscription: updated,
+            tokensAdded: tokenAmount
         })
     } catch (error) {
         console.error('Activate by order code error:', error)
