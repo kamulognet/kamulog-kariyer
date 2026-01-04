@@ -3,6 +3,34 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Default plans with tokens (fallback)
+const DEFAULT_PLAN_TOKENS: Record<string, number> = {
+    FREE: 10,
+    BASIC: 100,
+    PREMIUM: 500
+}
+
+// Get plan tokens from settings
+async function getPlanTokens(planId: string): Promise<number> {
+    try {
+        const setting = await prisma.siteSettings.findUnique({
+            where: { key: 'subscription_plans' }
+        })
+
+        if (setting?.value) {
+            const plans = JSON.parse(setting.value)
+            const plan = plans.find((p: any) => p.id === planId)
+            if (plan?.tokens !== undefined) {
+                return plan.tokens
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching plan tokens:', error)
+    }
+
+    return DEFAULT_PLAN_TOKENS[planId] || 0
+}
+
 // Admin middleware
 async function checkAdmin() {
     const session = await getServerSession(authOptions)
@@ -80,6 +108,14 @@ export async function GET(req: NextRequest) {
     }
 }
 
+// Generate order code
+function generateOrderCode(): string {
+    const prefix = 'ADM'
+    const timestamp = Date.now().toString(36).toUpperCase()
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase()
+    return `${prefix}-${timestamp}-${random}`
+}
+
 // Kullanıcı güncelle (tam CRUD)
 export async function PUT(req: NextRequest) {
     const session = await checkAdmin()
@@ -99,8 +135,7 @@ export async function PUT(req: NextRequest) {
             if (credits !== undefined) {
                 const result = await prisma.user.updateMany({
                     where: { id: { in: userIds } },
-                    data: { credits: { increment: credits } } // Fix: Set değil increment yapmalıydık ama updateMany desteklemezse loop gerekebilir. 
-                    // Prisma updateMany increment destekler.
+                    data: { credits: { increment: credits } }
                 })
                 updatedCount = result.count
 
@@ -148,46 +183,95 @@ export async function PUT(req: NextRequest) {
             },
         })
 
+        let tokensAdded = 0
+
         // Plan güncellemesi varsa subscription'ı da güncelle
-        if (plan) {
+        if (plan && plan !== 'FREE') {
             const existingSubscription = await prisma.subscription.findUnique({
                 where: { userId },
             })
 
-            const newStatus = plan === 'FREE' ? 'INACTIVE' : 'ACTIVE'
-            const newExpiresAt = plan !== 'FREE' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null
+            const newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            const orderCode = generateOrderCode()
 
-            // Kredi miktarını plana göre güncelle (Eğer kredi elle belirtilmediyse)
-            if (credits === undefined) {
-                // Mevcut kredinin üzerine ekle veya sıfırla
-                let additionalCredits = 0
-                if (plan === 'BASIC') additionalCredits = 50
-                if (plan === 'PREMIUM') additionalCredits = 1000 // Sembolik yüksek kredi
+            // Get tokens from admin plan settings
+            tokensAdded = await getPlanTokens(plan)
 
-                if (additionalCredits > 0) {
-                    await prisma.user.update({
-                        where: { id: userId },
-                        data: { credits: { increment: additionalCredits } }
-                    })
-                }
-            }
-
+            // Update or create subscription
             if (existingSubscription) {
                 await prisma.subscription.update({
                     where: { userId },
                     data: {
                         plan,
-                        status: newStatus,
+                        status: 'ACTIVE',
                         expiresAt: newExpiresAt,
+                        orderCode: orderCode,
                     },
                 })
-            } else if (plan !== 'FREE') {
+            } else {
                 await prisma.subscription.create({
                     data: {
                         userId,
                         plan,
                         status: 'ACTIVE',
-                        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                        expiresAt: newExpiresAt,
+                        orderCode: orderCode,
+                    },
+                })
+            }
+
+            // Add tokens to user credits (from plan settings)
+            if (tokensAdded > 0 && credits === undefined) {
+                await prisma.user.update({
+                    where: { id: userId },
+                    data: { credits: { increment: tokensAdded } }
+                })
+            }
+
+            // Get plan info for sales record
+            let planName = plan
+            let planPrice = 0
+            try {
+                const setting = await prisma.siteSettings.findUnique({
+                    where: { key: 'subscription_plans' }
+                })
+                if (setting?.value) {
+                    const plans = JSON.parse(setting.value)
+                    const planInfo = plans.find((p: any) => p.id === plan)
+                    if (planInfo) {
+                        planName = planInfo.name
+                        planPrice = planInfo.price || 0
+                    }
+                }
+            } catch (e) {
+                console.error('Error fetching plan info:', e)
+            }
+
+            // Create sales record
+            await prisma.salesRecord.create({
+                data: {
+                    userId,
+                    orderNumber: orderCode,
+                    plan: planName,
+                    amount: planPrice,
+                    status: 'COMPLETED',
+                    paymentMethod: 'ADMIN',
+                    notes: `Admin tarafından manuel olarak verildi: ${session.user.email}`
+                }
+            })
+        } else if (plan === 'FREE') {
+            // Downgrade to free - deactivate subscription
+            const existingSubscription = await prisma.subscription.findUnique({
+                where: { userId },
+            })
+
+            if (existingSubscription) {
+                await prisma.subscription.update({
+                    where: { userId },
+                    data: {
+                        plan: 'FREE',
+                        status: 'INACTIVE',
+                        expiresAt: null,
                     },
                 })
             }
@@ -202,12 +286,19 @@ export async function PUT(req: NextRequest) {
                 targetId: userId,
                 details: JSON.stringify({
                     changes: { name, phoneNumber, credits, role, plan },
+                    tokensAdded,
                     updatedBy: session.user.email,
                 }),
             },
         })
 
-        return NextResponse.json({ user, message: 'Kullanıcı güncellendi' })
+        return NextResponse.json({
+            user,
+            message: tokensAdded > 0
+                ? `Kullanıcı güncellendi ve ${tokensAdded} jeton yüklendi`
+                : 'Kullanıcı güncellendi',
+            tokensAdded
+        })
     } catch (error) {
         console.error('Update user error:', error)
         return NextResponse.json({ error: 'Kullanıcı güncellenemedi' }, { status: 500 })
