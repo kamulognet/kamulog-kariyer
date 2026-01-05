@@ -84,13 +84,28 @@ export default function PurchasePage() {
     const [showAgreement, setShowAgreement] = useState(false)
     const [showRefund, setShowRefund] = useState(false)
     const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null)
-    const [step, setStep] = useState<'select' | 'confirm' | 'complete'>('select')
+    const [step, setStep] = useState<'select' | 'confirm' | 'billing' | 'complete'>('select')
 
     // Kupon state
     const [couponCode, setCouponCode] = useState('')
     const [couponLoading, setCouponLoading] = useState(false)
     const [appliedCoupon, setAppliedCoupon] = useState<DiscountResult | null>(null)
     const [couponError, setCouponError] = useState('')
+
+    // Fatura bilgileri state
+    const [billingInfo, setBillingInfo] = useState({
+        name: '',
+        email: '',
+        phoneNumber: '',
+        address: '',
+        city: '',
+        district: '',
+        taxNumber: '',
+        taxOffice: ''
+    })
+    const [cities, setCities] = useState<string[]>([])
+    const [districts, setDistricts] = useState<string[]>([])
+    const [savingBilling, setSavingBilling] = useState(false)
 
     useEffect(() => {
         loadData()
@@ -114,6 +129,34 @@ export default function PurchasePage() {
             if (paymentData) {
                 setPaymentInfo(paymentData)
             }
+
+            // Şehirleri yükle
+            const citiesRes = await fetch('/api/locations')
+            const citiesData = await citiesRes.json()
+            setCities(citiesData.cities || [])
+
+            // Kullanıcı bilgilerini yükle
+            const userRes = await fetch('/api/user/profile')
+            const userData = await userRes.json()
+            if (userData.user) {
+                setBillingInfo({
+                    name: userData.user.name || '',
+                    email: userData.user.email || '',
+                    phoneNumber: userData.user.phoneNumber || '',
+                    address: userData.user.address || '',
+                    city: userData.user.city || '',
+                    district: userData.user.district || '',
+                    taxNumber: userData.user.taxNumber || '',
+                    taxOffice: userData.user.taxOffice || ''
+                })
+
+                // Şehir varsa ilçeleri yükle
+                if (userData.user.city) {
+                    const distRes = await fetch(`/api/locations?city=${encodeURIComponent(userData.user.city)}`)
+                    const distData = await distRes.json()
+                    setDistricts(distData.districts || [])
+                }
+            }
         } catch (error) {
             console.error('Error loading data:', error)
         } finally {
@@ -126,6 +169,59 @@ export default function PurchasePage() {
             await navigator.clipboard.writeText(paymentInfo.iban)
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
+        }
+    }
+
+    // Fatura şehir değişikliği
+    const handleBillingCityChange = async (city: string) => {
+        setBillingInfo({ ...billingInfo, city, district: '' })
+        if (city) {
+            try {
+                const res = await fetch(`/api/locations?city=${encodeURIComponent(city)}`)
+                const data = await res.json()
+                setDistricts(data.districts || [])
+            } catch (e) {
+                console.error('İlçeler yüklenemedi', e)
+                setDistricts([])
+            }
+        } else {
+            setDistricts([])
+        }
+    }
+
+    // Fatura bilgilerini kaydet
+    const saveBillingInfo = async () => {
+        // Zorunlu alan kontrolü
+        if (!billingInfo.name || !billingInfo.phoneNumber || !billingInfo.address || !billingInfo.city || !billingInfo.district) {
+            alert('Lütfen tüm zorunlu alanları doldurun (Ad Soyad, Telefon, Adres, Şehir, İlçe)')
+            return
+        }
+
+        setSavingBilling(true)
+        try {
+            const res = await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: billingInfo.name,
+                    phoneNumber: billingInfo.phoneNumber,
+                    address: billingInfo.address,
+                    city: billingInfo.city,
+                    district: billingInfo.district,
+                    taxNumber: billingInfo.taxNumber,
+                    taxOffice: billingInfo.taxOffice
+                })
+            })
+
+            if (res.ok) {
+                setStep('complete')
+            } else {
+                alert('Fatura bilgileri kaydedilemedi')
+            }
+        } catch (error) {
+            alert('Bir hata oluştu')
+        } finally {
+            setSavingBilling(false)
         }
     }
 
@@ -206,9 +302,9 @@ export default function PurchasePage() {
 
                 // %100 indirim = otomatik aktivasyon mesajı
                 if (appliedCoupon?.isFree) {
-                    setStep('complete')
+                    setStep('billing') // Fatura bilgisi adımına yönlendir
                 } else {
-                    setStep('complete')
+                    setStep('billing') // Fatura bilgisi adımına yönlendir
                 }
             } else {
                 alert(data.error || 'Sipariş oluşturulamadı')
@@ -525,6 +621,139 @@ export default function PurchasePage() {
                             </button>
                         </div>
                     </>
+                )}
+
+                {/* Billing Step - Fatura Bilgileri */}
+                {step === 'billing' && orderDetails && (
+                    <div className="max-w-2xl mx-auto">
+                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 mb-6 text-center">
+                            <h1 className="text-2xl font-bold text-white mb-2">📋 Fatura Bilgileri</h1>
+                            <p className="text-blue-100">Siparişiniz oluşturuldu. Fatura kesilebilmesi için bilgilerinizi kontrol edin.</p>
+                            <div className="bg-white/10 rounded-lg inline-block px-4 py-2 mt-3">
+                                <span className="text-white">Sipariş No: <strong>{orderDetails.orderCode}</strong></span>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 space-y-4">
+                            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-4">
+                                <p className="text-yellow-400 text-sm flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4" />
+                                    Fatura kesilebilmesi için tüm <strong>zorunlu (*)</strong> alanları doldurmanız gerekmektedir.
+                                </p>
+                            </div>
+
+                            {/* Ad Soyad & E-posta */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-1">Ad Soyad *</label>
+                                    <input
+                                        type="text"
+                                        value={billingInfo.name}
+                                        onChange={(e) => setBillingInfo({ ...billingInfo, name: e.target.value })}
+                                        className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                        placeholder="Ad Soyad"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-1">E-posta</label>
+                                    <input
+                                        type="email"
+                                        value={billingInfo.email}
+                                        disabled
+                                        className="w-full px-4 py-2.5 bg-slate-900/50 border border-slate-700 rounded-xl text-slate-400 cursor-not-allowed"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Telefon & Adres */}
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-1">Telefon *</label>
+                                <input
+                                    type="tel"
+                                    value={billingInfo.phoneNumber}
+                                    onChange={(e) => setBillingInfo({ ...billingInfo, phoneNumber: e.target.value })}
+                                    className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                    placeholder="+90 5XX XXX XX XX"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-1">Adres *</label>
+                                <textarea
+                                    value={billingInfo.address}
+                                    onChange={(e) => setBillingInfo({ ...billingInfo, address: e.target.value })}
+                                    className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none min-h-[80px] resize-none"
+                                    placeholder="Fatura adresi..."
+                                />
+                            </div>
+
+                            {/* Şehir & İlçe */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-1">Şehir *</label>
+                                    <select
+                                        value={billingInfo.city}
+                                        onChange={(e) => handleBillingCityChange(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                    >
+                                        <option value="">Şehir Seçin</option>
+                                        {cities.map(city => (
+                                            <option key={city} value={city}>{city}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-1">İlçe *</label>
+                                    <select
+                                        value={billingInfo.district}
+                                        onChange={(e) => setBillingInfo({ ...billingInfo, district: e.target.value })}
+                                        className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                        disabled={!billingInfo.city || districts.length === 0}
+                                    >
+                                        <option value="">İlçe Seçin</option>
+                                        {districts.map(district => (
+                                            <option key={district} value={district}>{district}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Vergi Bilgileri (Opsiyonel) */}
+                            <div className="pt-4 border-t border-slate-700">
+                                <p className="text-sm text-slate-500 mb-3">Kurumsal fatura için (opsiyonel)</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm text-slate-400 mb-1">Vergi No</label>
+                                        <input
+                                            type="text"
+                                            value={billingInfo.taxNumber}
+                                            onChange={(e) => setBillingInfo({ ...billingInfo, taxNumber: e.target.value })}
+                                            className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                            placeholder="Vergi numarası"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-slate-400 mb-1">Vergi Dairesi</label>
+                                        <input
+                                            type="text"
+                                            value={billingInfo.taxOffice}
+                                            onChange={(e) => setBillingInfo({ ...billingInfo, taxOffice: e.target.value })}
+                                            className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                            placeholder="Vergi dairesi"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={saveBillingInfo}
+                                disabled={savingBilling}
+                                className="w-full mt-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold rounded-xl transition disabled:opacity-50"
+                            >
+                                {savingBilling ? 'Kaydediliyor...' : 'Kaydet ve Devam Et →'}
+                            </button>
+                        </div>
+                    </div>
                 )}
 
                 {step === 'complete' && orderDetails && (
