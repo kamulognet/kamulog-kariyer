@@ -431,13 +431,70 @@ export default function PurchasePage() {
 
                         {/* Özet ve Satın Al */}
                         <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-2xl p-8">
+                            {/* Kupon Kodu Alanı */}
+                            <div className="mb-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                                <label className="block text-sm font-medium text-slate-300 mb-2">
+                                    🎁 Kupon Kodunuz Var mı?
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={couponCode}
+                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                        placeholder="KUPONKODU"
+                                        disabled={!!appliedCoupon?.valid}
+                                        className="flex-1 px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono disabled:opacity-50"
+                                    />
+                                    {appliedCoupon?.valid ? (
+                                        <button
+                                            onClick={removeCoupon}
+                                            className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition"
+                                        >
+                                            Kaldır
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={applyCoupon}
+                                            disabled={!couponCode.trim() || couponLoading}
+                                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {couponLoading ? '...' : 'Uygula'}
+                                        </button>
+                                    )}
+                                </div>
+                                {couponError && (
+                                    <p className="mt-2 text-red-400 text-sm">{couponError}</p>
+                                )}
+                                {appliedCoupon?.valid && (
+                                    <div className="mt-2 p-2 bg-green-500/20 border border-green-500/30 rounded-lg">
+                                        <p className="text-green-400 text-sm">
+                                            ✓ {appliedCoupon.message}
+                                            {appliedCoupon.isFree && ' - Ücretsiz abonelik!'}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Plan Özeti */}
                             <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-6">
                                 <div>
                                     <h3 className="text-xl font-bold text-white">{selectedPlan.name}</h3>
                                     <p className="text-slate-400">Aylık abonelik</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-3xl font-bold text-white">{selectedPlan.price} TL</p>
+                                    {appliedCoupon?.valid ? (
+                                        <>
+                                            <p className="text-lg text-slate-400 line-through">{selectedPlan.price} TL</p>
+                                            <p className="text-3xl font-bold text-green-400">
+                                                {appliedCoupon.isFree ? 'ÜCRETSİZ' : `${appliedCoupon.finalPrice} TL`}
+                                            </p>
+                                            <p className="text-sm text-green-400">
+                                                {appliedCoupon.discountAmount} TL indirim
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="text-3xl font-bold text-white">{selectedPlan.price} TL</p>
+                                    )}
                                 </div>
                             </div>
 

@@ -30,10 +30,31 @@ export default function CVBuilderPage() {
     const [isFinished, setIsFinished] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    // Jeton limiti state'leri
+    const [sessionTokenLimit, setSessionTokenLimit] = useState(25)
+    const [tokenCost, setTokenCost] = useState(2)
+    const usedTokens = messages.filter(m => m.role === 'user').length * tokenCost
+    const remainingSessionTokens = Math.max(0, sessionTokenLimit - usedTokens)
+
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login')
         }
+
+        // Jeton ayarlarını yükle
+        const loadSettings = async () => {
+            try {
+                const res = await fetch('/api/settings/chat-limits')
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.sessionLimit) setSessionTokenLimit(data.sessionLimit)
+                    if (data.tokenCost) setTokenCost(data.tokenCost)
+                }
+            } catch (e) {
+                console.error('Failed to load chat settings')
+            }
+        }
+        loadSettings()
     }, [status, router])
 
     const startChatSession = async () => {
@@ -409,6 +430,43 @@ export default function CVBuilderPage() {
 
                 {step === 'chat' && (
                     <div className="h-[calc(100vh-200px)]">
+                        {/* Jeton Limiti Gösterge Kutusu */}
+                        <div className="mb-4 p-3 bg-slate-800/50 border border-slate-700 rounded-xl flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-slate-400 text-sm">Sohbet Limiti:</span>
+                                    <span className="text-white font-medium">{sessionTokenLimit} jeton</span>
+                                </div>
+                                <div className="w-px h-4 bg-slate-600"></div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-slate-400 text-sm">Kullanılan:</span>
+                                    <span className="text-yellow-400 font-medium">{usedTokens} jeton</span>
+                                </div>
+                                <div className="w-px h-4 bg-slate-600"></div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-slate-400 text-sm">Kalan:</span>
+                                    <span className={`font-medium ${remainingSessionTokens <= 5 ? 'text-red-400' : 'text-green-400'}`}>
+                                        {remainingSessionTokens} jeton
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="text-xs text-slate-500">
+                                Her mesaj {tokenCost} jeton
+                            </div>
+                        </div>
+
+                        {/* Limit uyarısı */}
+                        {remainingSessionTokens <= 5 && remainingSessionTokens > 0 && (
+                            <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm">
+                                ⚠️ Sohbet jetonunuz azaldı! Kalan {remainingSessionTokens} jeton.
+                            </div>
+                        )}
+                        {remainingSessionTokens <= 0 && (
+                            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                                🚫 Bu sohbette jeton limitine ulaştınız. Yeni CV oluşturmak için yeni bir sohbet başlatın.
+                            </div>
+                        )}
+
                         <ChatWindow
                             messages={messages}
                             onSendMessage={handleSendMessage}

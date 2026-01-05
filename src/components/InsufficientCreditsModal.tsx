@@ -10,7 +10,7 @@ interface Plan {
     price: number
     tokens: number
     features: string[]
-    isPopular?: boolean
+    popular?: boolean
 }
 
 interface InsufficientCreditsModalProps {
@@ -95,10 +95,10 @@ export default function InsufficientCreditsModal({ show, required, current, onCl
                                 return (
                                     <div
                                         key={plan.id}
-                                        onClick={() => router.push(`/panel/abone-ol?plan=${plan.id}`)}
+                                        onClick={() => router.push(`/panel/satin-al?plan=${plan.id}`)}
                                         className={`p-4 ${colors.bg} border ${colors.border} rounded-xl cursor-pointer hover:opacity-80 transition relative`}
                                     >
-                                        {plan.isPopular && (
+                                        {plan.popular && (
                                             <div className="absolute -top-2 right-4 bg-purple-500 text-white text-xs px-2 py-0.5 rounded-full">
                                                 En Popüler
                                             </div>
