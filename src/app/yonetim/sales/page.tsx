@@ -33,6 +33,15 @@ interface SalesRecord {
     status: string
     notes: string | null
     createdAt: string
+    // Fatura bilgileri (satın alma anındaki)
+    billingName: string | null
+    billingEmail: string | null
+    billingPhone: string | null
+    billingAddress: string | null
+    billingCity: string | null
+    billingDistrict: string | null
+    billingTaxNumber: string | null
+    billingTaxOffice: string | null
     user: {
         id: string
         name: string | null
@@ -825,36 +834,44 @@ export default function AdminSalesPage() {
                                 </div>
                             )}
 
-                            {/* Fatura Bilgileri */}
+                            {/* Fatura Bilgileri (Satın Alma Anındaki) */}
                             <div className="pt-4 border-t border-slate-700">
-                                <h3 className="text-sm font-semibold text-purple-400 mb-3">📋 Fatura Bilgileri</h3>
+                                <h3 className="text-sm font-semibold text-purple-400 mb-3">📋 Fatura Bilgileri (Satın Alma Anındaki)</h3>
                                 <div className="grid grid-cols-2 gap-3 text-sm">
                                     <div>
+                                        <label className="text-slate-500">Fatura Adı</label>
+                                        <p className="text-white">{selectedSale.billingName || selectedSale.user.name || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-500">E-posta</label>
+                                        <p className="text-white">{selectedSale.billingEmail || selectedSale.user.email || '-'}</p>
+                                    </div>
+                                    <div>
                                         <label className="text-slate-500">Telefon</label>
-                                        <p className="text-white">{selectedSale.user.phoneNumber || '-'}</p>
+                                        <p className="text-white">{selectedSale.billingPhone || selectedSale.user.phoneNumber || '-'}</p>
                                     </div>
                                     <div>
                                         <label className="text-slate-500">Şehir / İlçe</label>
                                         <p className="text-white">
-                                            {selectedSale.user.city && selectedSale.user.district
-                                                ? `${selectedSale.user.city} / ${selectedSale.user.district}`
-                                                : selectedSale.user.city || '-'
+                                            {selectedSale.billingCity && selectedSale.billingDistrict
+                                                ? `${selectedSale.billingCity} / ${selectedSale.billingDistrict}`
+                                                : selectedSale.billingCity || selectedSale.user.city || '-'
                                             }
                                         </p>
                                     </div>
                                     <div className="col-span-2">
                                         <label className="text-slate-500">Adres</label>
-                                        <p className="text-white">{selectedSale.user.address || '-'}</p>
+                                        <p className="text-white">{selectedSale.billingAddress || selectedSale.user.address || '-'}</p>
                                     </div>
-                                    {(selectedSale.user.taxNumber || selectedSale.user.taxOffice) && (
+                                    {(selectedSale.billingTaxNumber || selectedSale.billingTaxOffice || selectedSale.user.taxNumber || selectedSale.user.taxOffice) && (
                                         <>
                                             <div>
                                                 <label className="text-slate-500">Vergi No</label>
-                                                <p className="text-white">{selectedSale.user.taxNumber || '-'}</p>
+                                                <p className="text-white">{selectedSale.billingTaxNumber || selectedSale.user.taxNumber || '-'}</p>
                                             </div>
                                             <div>
                                                 <label className="text-slate-500">Vergi Dairesi</label>
-                                                <p className="text-white">{selectedSale.user.taxOffice || '-'}</p>
+                                                <p className="text-white">{selectedSale.billingTaxOffice || selectedSale.user.taxOffice || '-'}</p>
                                             </div>
                                         </>
                                     )}

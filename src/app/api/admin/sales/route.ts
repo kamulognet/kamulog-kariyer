@@ -93,7 +93,27 @@ export async function GET(request: NextRequest) {
         const [sales, total, stats] = await Promise.all([
             prisma.salesRecord.findMany({
                 where,
-                include: {
+                select: {
+                    id: true,
+                    orderNumber: true,
+                    userId: true,
+                    subscriptionId: true,
+                    plan: true,
+                    amount: true,
+                    currency: true,
+                    paymentMethod: true,
+                    status: true,
+                    notes: true,
+                    createdAt: true,
+                    // Fatura bilgileri (satın alma anındaki)
+                    billingName: true,
+                    billingEmail: true,
+                    billingPhone: true,
+                    billingAddress: true,
+                    billingCity: true,
+                    billingDistrict: true,
+                    billingTaxNumber: true,
+                    billingTaxOffice: true,
                     user: {
                         select: {
                             id: true,
