@@ -126,7 +126,13 @@ export default function Footer() {
                         <p className="text-slate-500 text-sm">
                             © {new Date().getFullYear()} Kariyer Kamulog. Tüm hakları saklıdır.
                         </p>
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-4 flex-wrap justify-center">
+                            <Link href="/hakkimizda" className="text-slate-500 hover:text-slate-300 text-sm transition">
+                                Hakkımızda
+                            </Link>
+                            <Link href="/iletisim" className="text-slate-500 hover:text-slate-300 text-sm transition">
+                                İletişim
+                            </Link>
                             <Link href="/gizlilik" className="text-slate-500 hover:text-slate-300 text-sm transition">
                                 Gizlilik Politikası
                             </Link>
