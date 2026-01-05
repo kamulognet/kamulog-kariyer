@@ -20,6 +20,7 @@ import {
     CheckCircle,
     Coins
 } from 'lucide-react'
+import { ConsultantPromoCard } from '@/components/consultation/AskConsultantButton'
 
 interface CV {
     id: string
@@ -270,8 +271,8 @@ export default function JobMatchPage() {
                                         key={option.value}
                                         onClick={() => setJobType(option.value as any)}
                                         className={`flex-1 px-4 py-3 rounded-xl font-medium transition ${jobType === option.value
-                                                ? 'bg-purple-600 text-white'
-                                                : 'bg-slate-900 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                            ? 'bg-purple-600 text-white'
+                                            : 'bg-slate-900 text-slate-400 hover:bg-slate-700 border border-slate-700'
                                             }`}
                                     >
                                         {option.label}
@@ -332,8 +333,8 @@ export default function JobMatchPage() {
                                             <div className="flex items-center gap-3 mb-3">
                                                 <span className="text-slate-500 text-sm">#{index + 1}</span>
                                                 <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${match.type === 'PUBLIC'
-                                                        ? 'bg-orange-500/20 text-orange-400'
-                                                        : 'bg-blue-500/20 text-blue-400'
+                                                    ? 'bg-orange-500/20 text-orange-400'
+                                                    : 'bg-blue-500/20 text-blue-400'
                                                     }`}>
                                                     {match.type === 'PUBLIC' ? 'Kamu' : 'Özel'}
                                                 </span>
@@ -488,6 +489,9 @@ export default function JobMatchPage() {
                                             </ul>
                                         </div>
                                     )}
+
+                                    {/* Kariyer Danışmanlığı Promo */}
+                                    <ConsultantPromoCard className="mt-6" />
                                 </div>
                             ) : null}
                         </div>

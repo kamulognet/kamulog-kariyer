@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Sparkles, ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { useToast } from '@/components/ToastProvider'
 import InsufficientCreditsModal from '@/components/InsufficientCreditsModal'
+import { ConsultantPromoCard } from '@/components/consultation/AskConsultantButton'
 
 interface CV {
     id: string
@@ -252,6 +253,9 @@ export default function JobAnalyzePage() {
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Kariyer Danışmanlığı Promo */}
+                            <ConsultantPromoCard className="mt-4" />
 
                             {/* Başvuru Butonu - Her zaman göster */}
                             <div className="mt-6 pt-6 border-t border-slate-700 flex flex-col sm:flex-row gap-4 items-center justify-between">
