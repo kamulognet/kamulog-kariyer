@@ -35,6 +35,7 @@ const navItems = [
     { href: '/yonetim/whatsapp', label: 'WhatsApp Butonu', icon: MessageCircle },
     { href: '/yonetim/content', label: 'Sayfa İçerikleri', icon: Globe },
     { href: '/yonetim/medya', label: 'Medya', icon: Image },
+    { href: '/yonetim/yasal-sayfalar', label: 'Yasal Sayfalar', icon: FileText },
     { href: '/yonetim/logs', label: 'Sistem Logları', icon: FileText },
 ]
 
