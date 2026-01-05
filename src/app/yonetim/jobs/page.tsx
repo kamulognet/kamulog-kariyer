@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Search, Building2, MapPin, Briefcase, RefreshCw, Download, Edit, X } from 'lucide-react'
+import { Plus, Trash2, Search, Building2, MapPin, Briefcase, RefreshCw, Download, Edit, X, AlertTriangle, CheckSquare, Square } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface JobListing {
@@ -27,6 +27,11 @@ export default function AdminJobsPage() {
     const [showModal, setShowModal] = useState(false)
     const [showEditModal, setShowEditModal] = useState(false)
     const [editingJob, setEditingJob] = useState<JobListing | null>(null)
+
+    // Toplu seçim ve filtreler
+    const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set())
+    const [showExpiredOnly, setShowExpiredOnly] = useState(false)
+    const [bulkDeleting, setBulkDeleting] = useState(false)
 
     // New job form state
     const [formData, setFormData] = useState({
@@ -58,6 +63,15 @@ export default function AdminJobsPage() {
         }
     }
 
+    // İlan süresi geçmiş mi kontrol et
+    const isExpired = (deadline: string | null) => {
+        if (!deadline) return false
+        return new Date(deadline) < new Date()
+    }
+
+    // Süresi geçmiş ilan sayısı
+    const expiredCount = jobs.filter(j => isExpired(j.deadline)).length
+
     const handleDelete = async (id: string) => {
         if (!confirm('Bu ilanı silmek istediğinize emin misiniz?')) return
 
@@ -68,12 +82,71 @@ export default function AdminJobsPage() {
 
             if (res.ok) {
                 setJobs(jobs.filter(j => j.id !== id))
+                selectedJobs.delete(id)
+                setSelectedJobs(new Set(selectedJobs))
             } else {
                 alert('Silme işlemi başarısız')
             }
         } catch (error) {
             console.error('Delete error:', error)
         }
+    }
+
+    // Toplu silme
+    const handleBulkDelete = async () => {
+        if (selectedJobs.size === 0) return
+        if (!confirm(`${selectedJobs.size} ilanı silmek istediğinizden emin misiniz?`)) return
+
+        setBulkDeleting(true)
+        let successCount = 0
+        let failCount = 0
+
+        for (const id of selectedJobs) {
+            try {
+                const res = await fetch(`/api/jobs/${id}`, { method: 'DELETE' })
+                if (res.ok) {
+                    successCount++
+                } else {
+                    failCount++
+                }
+            } catch {
+                failCount++
+            }
+        }
+
+        if (successCount > 0) {
+            setJobs(jobs.filter(j => !selectedJobs.has(j.id)))
+            setSelectedJobs(new Set())
+        }
+
+        alert(`${successCount} ilan silindi${failCount > 0 ? `, ${failCount} hata oluştu` : ''}`)
+        setBulkDeleting(false)
+    }
+
+    // Tüm süresi geçmişleri seç
+    const selectAllExpired = () => {
+        const expiredIds = jobs.filter(j => isExpired(j.deadline)).map(j => j.id)
+        setSelectedJobs(new Set(expiredIds))
+    }
+
+    // Tümünü seç/kaldır
+    const toggleSelectAll = () => {
+        if (selectedJobs.size === filteredJobs.length) {
+            setSelectedJobs(new Set())
+        } else {
+            setSelectedJobs(new Set(filteredJobs.map(j => j.id)))
+        }
+    }
+
+    // Tek ilan seç/kaldır
+    const toggleSelectJob = (id: string) => {
+        const newSelected = new Set(selectedJobs)
+        if (newSelected.has(id)) {
+            newSelected.delete(id)
+        } else {
+            newSelected.add(id)
+        }
+        setSelectedJobs(newSelected)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -160,10 +233,16 @@ export default function AdminJobsPage() {
         }
     }
 
-    const filteredJobs = jobs.filter(job =>
+    // Filtreleme
+    let filteredJobs = jobs.filter(job =>
         job.title.toLowerCase().includes(search.toLowerCase()) ||
         job.company.toLowerCase().includes(search.toLowerCase())
     )
+
+    // Süresi geçmiş filtresi
+    if (showExpiredOnly) {
+        filteredJobs = filteredJobs.filter(job => isExpired(job.deadline))
+    }
 
     return (
         <div className="space-y-6">
@@ -196,7 +275,7 @@ export default function AdminJobsPage() {
             </div>
 
             {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5">
                     <div className="text-blue-200 text-sm">Toplam İlan</div>
                     <div className="text-3xl font-bold text-white mt-1">{jobs.length}</div>
@@ -215,19 +294,71 @@ export default function AdminJobsPage() {
                         {jobs.filter(j => new Date(j.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length}
                     </div>
                 </div>
+                <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-2xl p-5">
+                    <div className="text-red-200 text-sm flex items-center gap-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        Süresi Geçmiş
+                    </div>
+                    <div className="text-3xl font-bold text-white mt-1">{expiredCount}</div>
+                </div>
             </div>
 
-            {/* Search */}
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <input
-                    type="text"
-                    placeholder="İlan başlığı veya şirket ara..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            {/* Search & Filters */}
+            <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                    <input
+                        type="text"
+                        placeholder="İlan başlığı veya şirket ara..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowExpiredOnly(!showExpiredOnly)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${showExpiredOnly
+                            ? 'bg-red-600 text-white'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                            }`}
+                    >
+                        <AlertTriangle className="w-4 h-4" />
+                        Süresi Geçmişler ({expiredCount})
+                    </button>
+                    {expiredCount > 0 && (
+                        <button
+                            onClick={selectAllExpired}
+                            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg transition"
+                        >
+                            Tüm Geçmişleri Seç
+                        </button>
+                    )}
+                </div>
             </div>
+
+            {/* Bulk Actions */}
+            {selectedJobs.size > 0 && (
+                <div className="flex items-center gap-4 p-4 bg-blue-600/20 border border-blue-600/30 rounded-xl">
+                    <span className="text-blue-400 font-medium">
+                        {selectedJobs.size} ilan seçili
+                    </span>
+                    <button
+                        onClick={handleBulkDelete}
+                        disabled={bulkDeleting}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-lg transition"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        {bulkDeleting ? 'Siliniyor...' : 'Seçilenleri Sil'}
+                    </button>
+                    <button
+                        onClick={() => setSelectedJobs(new Set())}
+                        className="px-4 py-2 text-slate-400 hover:text-white transition"
+                    >
+                        Seçimi Kaldır
+                    </button>
+                </div>
+            )}
 
             {/* Table */}
             <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
@@ -235,29 +366,55 @@ export default function AdminJobsPage() {
                     <table className="w-full text-left text-slate-300">
                         <thead className="bg-slate-900/50 text-slate-400 uppercase text-xs">
                             <tr>
-                                <th className="px-6 py-4">Başlık / Şirket</th>
-                                <th className="px-6 py-4">Konum</th>
-                                <th className="px-6 py-4">Tür</th>
-                                <th className="px-6 py-4 text-right">İşlemler</th>
+                                <th className="px-4 py-4 w-12">
+                                    <button onClick={toggleSelectAll} className="p-1 hover:bg-slate-700 rounded">
+                                        {selectedJobs.size === filteredJobs.length && filteredJobs.length > 0 ? (
+                                            <CheckSquare className="w-5 h-5 text-blue-400" />
+                                        ) : (
+                                            <Square className="w-5 h-5" />
+                                        )}
+                                    </button>
+                                </th>
+                                <th className="px-4 py-4">Başlık / Şirket</th>
+                                <th className="px-4 py-4">Konum</th>
+                                <th className="px-4 py-4">Tür</th>
+                                <th className="px-4 py-4">Son Başvuru</th>
+                                <th className="px-4 py-4 text-right">İşlemler</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-700">
                             {filteredJobs.map((job) => (
-                                <tr key={job.id} className="hover:bg-slate-700/30 transition">
-                                    <td className="px-6 py-4">
+                                <tr
+                                    key={job.id}
+                                    className={`hover:bg-slate-700/30 transition ${isExpired(job.deadline) ? 'bg-red-500/10' : ''
+                                        } ${selectedJobs.has(job.id) ? 'bg-blue-500/20' : ''}`}
+                                >
+                                    <td className="px-4 py-4">
+                                        <button
+                                            onClick={() => toggleSelectJob(job.id)}
+                                            className="p-1 hover:bg-slate-700 rounded"
+                                        >
+                                            {selectedJobs.has(job.id) ? (
+                                                <CheckSquare className="w-5 h-5 text-blue-400" />
+                                            ) : (
+                                                <Square className="w-5 h-5" />
+                                            )}
+                                        </button>
+                                    </td>
+                                    <td className="px-4 py-4">
                                         <div className="font-semibold text-white">{job.title}</div>
                                         <div className="text-sm text-slate-400 flex items-center gap-1">
                                             <Building2 className="w-3 h-3" />
                                             {job.company}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-4 py-4">
                                         <div className="flex items-center gap-1 text-sm">
                                             <MapPin className="w-3 h-3" />
                                             {job.location || '-'}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-4 py-4">
                                         <span className={`px-2 py-1 text-xs font-medium rounded ${job.type === 'PUBLIC'
                                             ? 'bg-orange-500/20 text-orange-400'
                                             : 'bg-blue-500/20 text-blue-400'
@@ -265,7 +422,20 @@ export default function AdminJobsPage() {
                                             {job.type === 'PUBLIC' ? 'Kamu' : 'Özel'}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-right">
+                                    <td className="px-4 py-4">
+                                        {job.deadline ? (
+                                            <span className={`px-2 py-1 text-xs font-medium rounded ${isExpired(job.deadline)
+                                                ? 'bg-red-500/20 text-red-400'
+                                                : 'bg-green-500/20 text-green-400'
+                                                }`}>
+                                                {new Date(job.deadline).toLocaleDateString('tr-TR')}
+                                                {isExpired(job.deadline) && ' ⚠️'}
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-500">-</span>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-4 text-right">
                                         <div className="flex gap-1 justify-end">
                                             <button
                                                 onClick={() => handleEdit(job)}
@@ -291,249 +461,253 @@ export default function AdminJobsPage() {
             </div>
 
             {/* Add Job Modal */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-slate-800 rounded-2xl w-full max-w-2xl border border-slate-700 max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b border-slate-700">
-                            <h2 className="text-xl font-bold text-white">Yeni İlan Ekle</h2>
-                        </div>
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Başlık</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.title}
-                                        onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Şirket/Kurum</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.company}
-                                        onChange={e => setFormData({ ...formData, company: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                    />
-                                </div>
+            {
+                showModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="bg-slate-800 rounded-2xl w-full max-w-2xl border border-slate-700 max-h-[90vh] overflow-y-auto">
+                            <div className="p-6 border-b border-slate-700">
+                                <h2 className="text-xl font-bold text-white">Yeni İlan Ekle</h2>
                             </div>
+                            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Başlık</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.title}
+                                            onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Şirket/Kurum</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={formData.company}
+                                            onChange={e => setFormData({ ...formData, company: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        />
+                                    </div>
+                                </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Konum</label>
+                                        <input
+                                            type="text"
+                                            value={formData.location}
+                                            onChange={e => setFormData({ ...formData, location: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Tür</label>
+                                        <select
+                                            value={formData.type}
+                                            onChange={e => setFormData({ ...formData, type: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        >
+                                            <option value="PRIVATE">Özel Sektör</option>
+                                            <option value="PUBLIC">Kamu</option>
+                                        </select>
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Konum</label>
-                                    <input
-                                        type="text"
-                                        value={formData.location}
-                                        onChange={e => setFormData({ ...formData, location: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Açıklama</label>
+                                    <textarea
+                                        required
+                                        rows={4}
+                                        value={formData.description}
+                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white resize-none"
                                     />
                                 </div>
+
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Tür</label>
-                                    <select
-                                        value={formData.type}
-                                        onChange={e => setFormData({ ...formData, type: e.target.value })}
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Gereksinimler</label>
+                                    <textarea
+                                        rows={3}
+                                        value={formData.requirements}
+                                        onChange={e => setFormData({ ...formData, requirements: e.target.value })}
+                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white resize-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Başvuru Linki (Resmi Site)</label>
+                                    <input
+                                        type="url"
+                                        placeholder="https://kariyer.gov.tr/ilan/..."
+                                        value={formData.applicationUrl}
+                                        onChange={e => setFormData({ ...formData, applicationUrl: e.target.value })}
                                         className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                    />
+                                    <p className="text-xs text-slate-500 mt-1">Kullanıcılar bu linke yönlendirilecek</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Son Başvuru Tarihi</label>
+                                        <input
+                                            type="date"
+                                            value={formData.deadline}
+                                            onChange={e => setFormData({ ...formData, deadline: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowModal(false)}
+                                        className="px-4 py-2 text-slate-400 hover:text-white transition"
                                     >
-                                        <option value="PRIVATE">Özel Sektör</option>
-                                        <option value="PUBLIC">Kamu</option>
-                                    </select>
+                                        İptal
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition"
+                                    >
+                                        Oluştur
+                                    </button>
                                 </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Açıklama</label>
-                                <textarea
-                                    required
-                                    rows={4}
-                                    value={formData.description}
-                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white resize-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Gereksinimler</label>
-                                <textarea
-                                    rows={3}
-                                    value={formData.requirements}
-                                    onChange={e => setFormData({ ...formData, requirements: e.target.value })}
-                                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white resize-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Başvuru Linki (Resmi Site)</label>
-                                <input
-                                    type="url"
-                                    placeholder="https://kariyer.gov.tr/ilan/..."
-                                    value={formData.applicationUrl}
-                                    onChange={e => setFormData({ ...formData, applicationUrl: e.target.value })}
-                                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                />
-                                <p className="text-xs text-slate-500 mt-1">Kullanıcılar bu linke yönlendirilecek</p>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Son Başvuru Tarihi</label>
-                                    <input
-                                        type="date"
-                                        value={formData.deadline}
-                                        onChange={e => setFormData({ ...formData, deadline: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 text-slate-400 hover:text-white transition"
-                                >
-                                    İptal
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition"
-                                >
-                                    Oluştur
-                                </button>
-                            </div>
-                        </form>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Edit Job Modal */}
-            {showEditModal && editingJob && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-slate-800 rounded-2xl w-full max-w-2xl border border-slate-700 max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b border-slate-700 flex justify-between items-center">
-                            <h2 className="text-xl font-bold text-white">İlanı Düzenle</h2>
-                            <button
-                                onClick={() => { setShowEditModal(false); setEditingJob(null) }}
-                                className="p-2 hover:bg-slate-700 rounded-lg transition"
-                            >
-                                <X className="w-5 h-5 text-slate-400" />
-                            </button>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Başlık</label>
-                                    <input
-                                        type="text"
-                                        value={editingJob.title}
-                                        onChange={e => setEditingJob({ ...editingJob, title: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Şirket</label>
-                                    <input
-                                        type="text"
-                                        value={editingJob.company}
-                                        onChange={e => setEditingJob({ ...editingJob, company: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Konum</label>
-                                    <input
-                                        type="text"
-                                        value={editingJob.location || ''}
-                                        onChange={e => setEditingJob({ ...editingJob, location: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Tür</label>
-                                    <select
-                                        value={editingJob.type}
-                                        onChange={e => setEditingJob({ ...editingJob, type: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                    >
-                                        <option value="PRIVATE">Özel Sektör</option>
-                                        <option value="PUBLIC">Kamu</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">İş Tanımı</label>
-                                <textarea
-                                    rows={3}
-                                    value={editingJob.description || ''}
-                                    onChange={e => setEditingJob({ ...editingJob, description: e.target.value })}
-                                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Gereksinimler</label>
-                                <textarea
-                                    rows={3}
-                                    value={editingJob.requirements || ''}
-                                    onChange={e => setEditingJob({ ...editingJob, requirements: e.target.value })}
-                                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Kaynak URL</label>
-                                    <input
-                                        type="url"
-                                        value={editingJob.sourceUrl || ''}
-                                        onChange={e => setEditingJob({ ...editingJob, sourceUrl: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                        placeholder="https://..."
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-green-400 mb-1">🔗 Başvuru Linki</label>
-                                    <input
-                                        type="url"
-                                        value={editingJob.applicationUrl || ''}
-                                        onChange={e => setEditingJob({ ...editingJob, applicationUrl: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-green-700 rounded-lg text-white"
-                                        placeholder="https://basvuru.example.com"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">⏰ Son Başvuru Tarihi</label>
-                                    <input
-                                        type="date"
-                                        value={editingJob.deadline ? editingJob.deadline.split('T')[0] : ''}
-                                        onChange={e => setEditingJob({ ...editingJob, deadline: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex gap-3 pt-4 border-t border-slate-700">
+            {
+                showEditModal && editingJob && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="bg-slate-800 rounded-2xl w-full max-w-2xl border border-slate-700 max-h-[90vh] overflow-y-auto">
+                            <div className="p-6 border-b border-slate-700 flex justify-between items-center">
+                                <h2 className="text-xl font-bold text-white">İlanı Düzenle</h2>
                                 <button
                                     onClick={() => { setShowEditModal(false); setEditingJob(null) }}
-                                    className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
+                                    className="p-2 hover:bg-slate-700 rounded-lg transition"
                                 >
-                                    İptal
+                                    <X className="w-5 h-5 text-slate-400" />
                                 </button>
-                                <button
-                                    onClick={handleUpdate}
-                                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition font-medium"
-                                >
-                                    Kaydet
-                                </button>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Başlık</label>
+                                        <input
+                                            type="text"
+                                            value={editingJob.title}
+                                            onChange={e => setEditingJob({ ...editingJob, title: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Şirket</label>
+                                        <input
+                                            type="text"
+                                            value={editingJob.company}
+                                            onChange={e => setEditingJob({ ...editingJob, company: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Konum</label>
+                                        <input
+                                            type="text"
+                                            value={editingJob.location || ''}
+                                            onChange={e => setEditingJob({ ...editingJob, location: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Tür</label>
+                                        <select
+                                            value={editingJob.type}
+                                            onChange={e => setEditingJob({ ...editingJob, type: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        >
+                                            <option value="PRIVATE">Özel Sektör</option>
+                                            <option value="PUBLIC">Kamu</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">İş Tanımı</label>
+                                    <textarea
+                                        rows={3}
+                                        value={editingJob.description || ''}
+                                        onChange={e => setEditingJob({ ...editingJob, description: e.target.value })}
+                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Gereksinimler</label>
+                                    <textarea
+                                        rows={3}
+                                        value={editingJob.requirements || ''}
+                                        onChange={e => setEditingJob({ ...editingJob, requirements: e.target.value })}
+                                        className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Kaynak URL</label>
+                                        <input
+                                            type="url"
+                                            value={editingJob.sourceUrl || ''}
+                                            onChange={e => setEditingJob({ ...editingJob, sourceUrl: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                            placeholder="https://..."
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-green-400 mb-1">🔗 Başvuru Linki</label>
+                                        <input
+                                            type="url"
+                                            value={editingJob.applicationUrl || ''}
+                                            onChange={e => setEditingJob({ ...editingJob, applicationUrl: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-green-700 rounded-lg text-white"
+                                            placeholder="https://basvuru.example.com"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">⏰ Son Başvuru Tarihi</label>
+                                        <input
+                                            type="date"
+                                            value={editingJob.deadline ? editingJob.deadline.split('T')[0] : ''}
+                                            onChange={e => setEditingJob({ ...editingJob, deadline: e.target.value })}
+                                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 pt-4 border-t border-slate-700">
+                                    <button
+                                        onClick={() => { setShowEditModal(false); setEditingJob(null) }}
+                                        className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
+                                    >
+                                        İptal
+                                    </button>
+                                    <button
+                                        onClick={handleUpdate}
+                                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition font-medium"
+                                    >
+                                        Kaydet
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     )
 }
