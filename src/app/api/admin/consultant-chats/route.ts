@@ -117,9 +117,11 @@ export async function POST(request: NextRequest) {
         // Log kaydı
         await prisma.adminLog.create({
             data: {
-                userId: session.user.id,
+                adminId: session.user.id,
                 action: 'CONSULTANT_MESSAGE',
-                details: `Danışman mesajı gönderildi. Oda: ${roomId}, Danışman: ${consultantId}`
+                targetType: 'CHAT',
+                targetId: roomId,
+                details: `Danışman mesajı gönderildi. Danışman: ${consultantId}`
             }
         })
 
