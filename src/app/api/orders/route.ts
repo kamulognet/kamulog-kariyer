@@ -126,15 +126,15 @@ export async function POST(request: NextRequest) {
                 }
             })
 
-            // Jetonları yükle (hem genel krediler hem CV chat jetonları)
+            // Jetonları yükle (krediler birikir, CV chat jetonları plan sınırına SET edilir)
             await prisma.user.update({
                 where: { id: session.user.id },
                 data: {
                     credits: { increment: planTokens.tokens },
-                    cvChatTokens: { increment: planTokens.cvChatTokens }
+                    cvChatTokens: planTokens.cvChatTokens // SET - Birikmez, plan limitine ayarlanır
                 }
             })
-            console.log(`Auto-activated subscription for user ${session.user.id}. Added ${planTokens.tokens} credits and ${planTokens.cvChatTokens} cvChatTokens.`)
+            console.log(`Auto-activated subscription for user ${session.user.id}. Added ${planTokens.tokens} credits. Set cvChatTokens to ${planTokens.cvChatTokens}.`)
         }
 
         // Kullanıcı bilgilerini al
