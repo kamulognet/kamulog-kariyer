@@ -42,10 +42,14 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const { cvId, jobId, type, action = 'match' } = body
 
-        // Kullanıcının kredisi var mı kontrol et
+        // Kullanıcının kredisi ve şehir bilgisi var mı kontrol et
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { credits: true, subscription: true },
+            select: {
+                credits: true,
+                subscription: true,
+                city: true,  // Fatura adresi şehri
+            },
         })
 
         if (!user) {
@@ -133,11 +137,79 @@ export async function POST(request: NextRequest) {
                 remainingCredits: updatedUser.credits,
             })
         } else if (action === 'suggest') {
-            // En uygun ilanları öner - Pool size artırıldı
-            const jobs = await prisma.jobListing.findMany({
-                where: type && type !== 'ALL' ? { type } : undefined,
-                take: 50,
-            })
+            // Şehir bilgisini belirle: 1) Fatura adresi 2) CV'den
+            let userCity = user.city
+
+            // CV'den şehir al (fatura adresi yoksa)
+            if (!userCity && cvData.personalInfo?.address) {
+                // CV adresinden şehir çıkarmaya çalış
+                const cvAddress = cvData.personalInfo.address
+                // Türkiye şehirlerinden eşleşen bul
+                const turkishCities = ['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Adana', 'Konya', 'Gaziantep', 'Şanlıurfa', 'Kocaeli', 'Mersin', 'Diyarbakır', 'Hatay', 'Manisa', 'Kayseri', 'Samsun', 'Balıkesir', 'Kahramanmaraş', 'Van', 'Aydın', 'Denizli', 'Sakarya', 'Tekirdağ', 'Muğla', 'Eskişehir', 'Mardin', 'Trabzon', 'Erzurum', 'Ordu', 'Malatya', 'Afyonkarahisar', 'Adıyaman', 'Elazığ', 'Sivas', 'Şırnak', 'Tokat', 'Ağrı', 'Isparta', 'Çorum', 'Kütahya', 'Aksaray', 'Düzce', 'Giresun', 'Uşak', 'Batman', 'Rize', 'Osmaniye', 'Zonguldak', 'Niğde', 'Amasya', 'Edirne', 'Bolu', 'Çanakkale', 'Siirt', 'Kastamonu', 'Kırıkkale', 'Yozgat', 'Muş', 'Nevşehir', 'Bitlis', 'Kırşehir', 'Karaman', 'Kırklareli', 'Bingöl', 'Karabük', 'Sinop', 'Hakkari', 'Bartın', 'Artvin', 'Iğdır', 'Çankırı', 'Gümüşhane', 'Yalova', 'Erzincan', 'Bilecik', 'Tunceli', 'Kilis', 'Ardahan', 'Bayburt']
+                for (const city of turkishCities) {
+                    if (cvAddress.toLowerCase().includes(city.toLowerCase())) {
+                        userCity = city
+                        break
+                    }
+                }
+            }
+
+            // İlan türüne göre filtreleme yap
+            let jobs
+            const requestedType = type || 'ALL'
+
+            if (requestedType === 'PRIVATE' || requestedType === 'ALL') {
+                // PRIVATE ilanlar için şehir gerekli
+                if (!userCity && (requestedType === 'PRIVATE' || requestedType === 'ALL')) {
+                    // Sadece PRIVATE istendi ve şehir yok
+                    if (requestedType === 'PRIVATE') {
+                        // Jetonu iade et
+                        await prisma.user.update({
+                            where: { id: session.user.id },
+                            data: { credits: { increment: creditCost } }
+                        })
+                        return NextResponse.json({
+                            error: 'Özel sektör ilanlarını görmek için lütfen profilinizden fatura adresinizi (şehir bilginizi) doldurun.',
+                            errorType: 'CITY_REQUIRED',
+                            redirectTo: '/panel/profil'
+                        }, { status: 400 })
+                    }
+                }
+            }
+
+            if (requestedType === 'ALL') {
+                // Hem KAMU hem ÖZEL ilanları getir
+                // KAMU: tüm şehirler, ÖZEL: kullanıcının şehrindekiler
+                const publicJobs = await prisma.jobListing.findMany({
+                    where: { type: 'PUBLIC' },
+                    take: 25,
+                })
+
+                const privateJobs = userCity ? await prisma.jobListing.findMany({
+                    where: {
+                        type: 'PRIVATE',
+                        location: { contains: userCity, mode: 'insensitive' }
+                    },
+                    take: 25,
+                }) : []
+
+                jobs = [...publicJobs, ...privateJobs]
+            } else if (requestedType === 'PUBLIC') {
+                // Kamu ilanları - tüm şehirler
+                jobs = await prisma.jobListing.findMany({
+                    where: { type: 'PUBLIC' },
+                    take: 50,
+                })
+            } else {
+                // Özel sektör ilanları - sadece kullanıcının şehri
+                jobs = await prisma.jobListing.findMany({
+                    where: {
+                        type: 'PRIVATE',
+                        location: { contains: userCity!, mode: 'insensitive' }
+                    },
+                    take: 50,
+                })
+            }
 
             const suggestions = await suggestBestJobs(cvData, jobs.map(j => ({
                 id: j.id,
@@ -159,6 +231,7 @@ export async function POST(request: NextRequest) {
 
             return NextResponse.json({
                 suggestions: suggestedJobs,
+                userCity: userCity || null,
                 creditsUsed: creditCost,
                 remainingCredits: updatedUser.credits,
             })
