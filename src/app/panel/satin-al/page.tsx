@@ -52,6 +52,25 @@ interface OrderDetails {
     }
 }
 
+interface CouponInfo {
+    id: string
+    code: string
+    name: string | null
+    discountType: string
+    discountValue: number
+    planRestriction: string | null
+}
+
+interface DiscountResult {
+    valid: boolean
+    coupon?: CouponInfo
+    discountAmount: number
+    finalPrice: number
+    isFree: boolean
+    message?: string
+    error?: string
+}
+
 export default function PurchasePage() {
     const { data: session } = useSession()
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
@@ -66,6 +85,12 @@ export default function PurchasePage() {
     const [showRefund, setShowRefund] = useState(false)
     const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null)
     const [step, setStep] = useState<'select' | 'confirm' | 'complete'>('select')
+
+    // Kupon state
+    const [couponCode, setCouponCode] = useState('')
+    const [couponLoading, setCouponLoading] = useState(false)
+    const [appliedCoupon, setAppliedCoupon] = useState<DiscountResult | null>(null)
+    const [couponError, setCouponError] = useState('')
 
     useEffect(() => {
         loadData()
@@ -104,18 +129,65 @@ export default function PurchasePage() {
         }
     }
 
+    // Kupon uygula
+    const applyCoupon = async () => {
+        if (!couponCode.trim() || !selectedPlan) return
+
+        setCouponLoading(true)
+        setCouponError('')
+        setAppliedCoupon(null)
+
+        try {
+            const res = await fetch('/api/coupons/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: couponCode.trim(),
+                    planId: selectedPlan.id,
+                    originalPrice: selectedPlan.price
+                })
+            })
+
+            const data = await res.json()
+
+            if (data.valid) {
+                setAppliedCoupon(data)
+            } else {
+                setCouponError(data.error || 'Kupon geçersiz')
+            }
+        } catch (error) {
+            setCouponError('Kupon doğrulanamadı')
+        } finally {
+            setCouponLoading(false)
+        }
+    }
+
+    // Kuponu kaldır
+    const removeCoupon = () => {
+        setAppliedCoupon(null)
+        setCouponCode('')
+        setCouponError('')
+    }
+
     const handlePurchase = async () => {
         if (!selectedPlan || !session?.user) return
 
         setProcessing(true)
         try {
+            // Gerçek fiyat (kuponlu veya normal)
+            const finalAmount = appliedCoupon?.valid ? appliedCoupon.finalPrice : selectedPlan.price
+
             const res = await fetch('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     plan: selectedPlan.id,
                     planName: selectedPlan.name,
-                    amount: selectedPlan.price
+                    amount: finalAmount,
+                    originalAmount: selectedPlan.price,
+                    couponCode: appliedCoupon?.coupon?.code || null,
+                    couponDiscount: appliedCoupon?.discountAmount || 0,
+                    isFree: appliedCoupon?.isFree || false
                 })
             })
 
@@ -124,14 +196,20 @@ export default function PurchasePage() {
                 setOrderDetails({
                     orderCode: data.order.orderCode,
                     plan: selectedPlan.name,
-                    amount: selectedPlan.price,
+                    amount: finalAmount,
                     tokens: selectedPlan.tokens || 0,
                     user: {
                         name: data.order.user?.name || session.user.name || '',
                         email: data.order.user?.email || session.user.email || ''
                     }
                 })
-                setStep('complete')
+
+                // %100 indirim = otomatik aktivasyon mesajı
+                if (appliedCoupon?.isFree) {
+                    setStep('complete')
+                } else {
+                    setStep('complete')
+                }
             } else {
                 alert(data.error || 'Sipariş oluşturulamadı')
             }

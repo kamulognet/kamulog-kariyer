@@ -11,6 +11,23 @@ function generateOrderNumber() {
     return `KK-${timestamp}-${random}`
 }
 
+// Plan tokenlarını al
+async function getPlanTokens(planId: string): Promise<number> {
+    try {
+        const setting = await prisma.siteSettings.findUnique({
+            where: { key: 'subscription_plans' }
+        })
+        if (setting?.value) {
+            const plans = JSON.parse(setting.value)
+            const plan = plans.find((p: any) => p.id === planId)
+            return plan?.tokens || 0
+        }
+    } catch (e) {
+        console.error('Error getting plan tokens:', e)
+    }
+    return 0
+}
+
 // POST - Yeni sipariş oluştur
 export async function POST(request: NextRequest) {
     try {
@@ -20,9 +37,9 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json()
-        const { plan, amount, planName } = body
+        const { plan, amount, planName, couponCode, couponDiscount, isFree, originalAmount } = body
 
-        console.log('Order request:', { plan, amount, planName, userId: session.user.id })
+        console.log('Order request:', { plan, amount, planName, couponCode, isFree, userId: session.user.id })
 
         if (!plan) {
             return NextResponse.json({ error: 'Plan gerekli' }, { status: 400 })
@@ -34,19 +51,65 @@ export async function POST(request: NextRequest) {
 
         const orderNumber = generateOrderNumber()
 
-        // Satış kaydı oluştur (pending durumunda)
+        // Kupon kontrolü ve kullanım sayısını artır
+        if (couponCode) {
+            try {
+                await prisma.coupon.update({
+                    where: { code: couponCode.toUpperCase() },
+                    data: { usageCount: { increment: 1 } }
+                })
+                console.log(`Coupon ${couponCode} usage incremented`)
+            } catch (e) {
+                console.error('Error incrementing coupon usage:', e)
+            }
+        }
+
+        // Satış kaydı oluştur
         const salesRecord = await prisma.salesRecord.create({
             data: {
                 userId: session.user.id,
                 plan: String(plan),
                 amount: Number(amount),
-                status: 'PENDING',
+                status: isFree ? 'COMPLETED' : 'PENDING', // Ücretsiz siparişler direkt tamamlanır
                 orderNumber,
-                paymentMethod: 'BANK_TRANSFER'
+                paymentMethod: isFree ? 'COUPON_100' : 'BANK_TRANSFER',
+                notes: couponCode ? `Kupon: ${couponCode} | İndirim: ${couponDiscount}₺` : null
             }
         })
 
         console.log('Order created:', salesRecord)
+
+        // %100 indirimli kupon = Otomatik aktivasyon
+        if (isFree) {
+            const tokens = await getPlanTokens(plan)
+
+            // Abonelik oluştur/güncelle
+            await prisma.subscription.upsert({
+                where: { userId: session.user.id },
+                update: {
+                    plan: String(plan),
+                    status: 'ACTIVE',
+                    orderCode: orderNumber,
+                    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 gün
+                },
+                create: {
+                    userId: session.user.id,
+                    plan: String(plan),
+                    status: 'ACTIVE',
+                    orderCode: orderNumber,
+                    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                }
+            })
+
+            // Jetonları yükle
+            if (tokens > 0) {
+                await prisma.user.update({
+                    where: { id: session.user.id },
+                    data: { credits: { increment: tokens } }
+                })
+                console.log(`Auto-activated subscription for user ${session.user.id}. Added ${tokens} tokens.`)
+            }
+        }
 
         // Kullanıcı bilgilerini al
         const user = await prisma.user.findUnique({
@@ -69,8 +132,8 @@ export async function POST(request: NextRequest) {
             console.error('Error loading payment info:', e)
         }
 
-        // Email gönder
-        if (user?.email) {
+        // Email gönder (ücretsiz siparişler için farklı içerik olabilir)
+        if (user?.email && !isFree) {
             await sendOrderConfirmationEmail({
                 orderCode: orderNumber,
                 planName: planName || plan,
@@ -85,12 +148,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
+            autoActivated: isFree,
             order: {
                 id: salesRecord.id,
                 orderCode: orderNumber,
                 plan: salesRecord.plan,
                 amount: salesRecord.amount,
-                status: 'pending',
+                status: isFree ? 'completed' : 'pending',
                 createdAt: salesRecord.createdAt,
                 user
             }

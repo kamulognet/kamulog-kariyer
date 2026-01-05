@@ -4,22 +4,37 @@ import { authOptions } from '@/lib/auth'
 import openai, { generateCVChat, type ChatMessage } from '@/lib/openai'
 import { prisma } from '@/lib/prisma'
 
-// Varsayılan jeton maliyeti
+// Varsayılan değerler
 const DEFAULT_CHAT_TOKEN_COST = 2
+const DEFAULT_SESSION_TOKEN_LIMIT = 25
 
-// Chat jeton maliyetini admin ayarlarından al
-async function getChatTokenCost() {
+// Chat jeton maliyetini ve session limitini al
+async function getChatSettings() {
     try {
-        const setting = await prisma.siteSettings.findUnique({
-            where: { key: 'cv_chat_token_cost' }
+        const settings = await prisma.siteSettings.findMany({
+            where: {
+                key: {
+                    in: ['cv_chat_token_cost', 'cv_chat_session_limit']
+                }
+            }
         })
-        if (setting?.value) {
-            return parseInt(setting.value, 10) || DEFAULT_CHAT_TOKEN_COST
-        }
+
+        let tokenCost = DEFAULT_CHAT_TOKEN_COST
+        let sessionLimit = DEFAULT_SESSION_TOKEN_LIMIT
+
+        settings.forEach(s => {
+            if (s.key === 'cv_chat_token_cost') {
+                tokenCost = parseInt(s.value, 10) || DEFAULT_CHAT_TOKEN_COST
+            } else if (s.key === 'cv_chat_session_limit') {
+                sessionLimit = parseInt(s.value, 10) || DEFAULT_SESSION_TOKEN_LIMIT
+            }
+        })
+
+        return { tokenCost, sessionLimit }
     } catch (error) {
-        console.error('Error fetching chat token cost:', error)
+        console.error('Error fetching chat settings:', error)
+        return { tokenCost: DEFAULT_CHAT_TOKEN_COST, sessionLimit: DEFAULT_SESSION_TOKEN_LIMIT }
     }
-    return DEFAULT_CHAT_TOKEN_COST
 }
 
 export async function POST(req: NextRequest) {
@@ -36,8 +51,29 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Messages required' }, { status: 400 })
         }
 
-        // Jeton maliyetini al
-        const tokenCost = await getChatTokenCost()
+        // Jeton ayarlarını al
+        const { tokenCost, sessionLimit } = await getChatSettings()
+
+        // Session bazlı jeton kullanım kontrolü
+        if (sessionId) {
+            const chatSession = await prisma.chatSession.findUnique({
+                where: { id: sessionId }
+            })
+
+            if (chatSession) {
+                const messageCount = messages.filter((m: ChatMessage) => m.role === 'user').length
+                const usedTokens = messageCount * tokenCost
+
+                if (usedTokens >= sessionLimit) {
+                    return NextResponse.json({
+                        error: `Bu sohbet için jeton limitine ulaştınız (${sessionLimit} jeton). Yeni bir sohbet başlatın.`,
+                        sessionLimitReached: true,
+                        usedTokens,
+                        sessionLimit,
+                    }, { status: 403 })
+                }
+            }
+        }
 
         // Kullanıcı jeton kontrolü
         const user = await prisma.user.findUnique({

@@ -17,7 +17,8 @@ import {
     Wallet,
     Globe,
     MessageCircle,
-    Coins
+    Coins,
+    Tag
 } from 'lucide-react'
 
 const navItems = [
@@ -27,6 +28,7 @@ const navItems = [
     { href: '/yonetim/plans', label: 'Planlar & Jetonlar', icon: Coins },
     { href: '/yonetim/jobs', label: 'İş İlanları', icon: Briefcase },
     { href: '/yonetim/sales', label: 'Satış Kayıtları', icon: ShoppingCart },
+    { href: '/yonetim/campaigns', label: 'Kampanyalar', icon: Tag },
     { href: '/yonetim/payment-settings', label: 'Ödeme Ayarları', icon: Wallet },
     { href: '/yonetim/whatsapp', label: 'WhatsApp Butonu', icon: MessageCircle },
     { href: '/yonetim/content', label: 'Sayfa İçerikleri', icon: Globe },
