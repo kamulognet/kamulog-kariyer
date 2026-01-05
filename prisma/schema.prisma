@@ -15,6 +15,7 @@ model User {
   phoneNumber         String?
   role                String    @default("USER") // USER, ADMIN
   credits             Int       @default(10) // Başlangıç kredisi
+  cvApplicationsUsed  Int       @default(0) // Kullanılan CV başvuru sayısı
   emailVerified       DateTime?
   verificationCode    String?
   newEmail            String?

@@ -11,6 +11,8 @@ interface Plan {
     name: string
     price: number
     tokens: number
+    chatLimit: number        // Sohbet jeton limiti (0 = sınırsız)
+    cvApplicationLimit: number // CV başvuru sayısı limiti (0 = sınırsız)
     features: string[]
     popular: boolean
     tag: string | null
@@ -110,6 +112,8 @@ export default function AdminPlansPage() {
             name: 'Yeni Plan',
             price: 0,
             tokens: 0,
+            chatLimit: 20,
+            cvApplicationLimit: 10,
             features: ['Özellik 1'],
             popular: false,
             tag: null
@@ -217,6 +221,30 @@ export default function AdminPlansPage() {
                                             onChange={(e) => updatePlan(planIndex, 'tokens', Number(e.target.value))}
                                             className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                                         />
+                                    </div>
+                                </div>
+
+                                {/* Limitler */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-slate-700/30 rounded-xl border border-slate-600">
+                                    <div>
+                                        <label className="block text-sm text-slate-400 mb-2">🗨️ Sohbet Jeton Limiti</label>
+                                        <input
+                                            type="number"
+                                            value={plan.chatLimit || 0}
+                                            onChange={(e) => updatePlan(planIndex, 'chatLimit', Number(e.target.value))}
+                                            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <p className="text-xs text-slate-500 mt-1">Sohbet başına max jeton (0 = sınırsız)</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-slate-400 mb-2">📝 CV Başvuru Limiti</label>
+                                        <input
+                                            type="number"
+                                            value={plan.cvApplicationLimit || 0}
+                                            onChange={(e) => updatePlan(planIndex, 'cvApplicationLimit', Number(e.target.value))}
+                                            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        />
+                                        <p className="text-xs text-slate-500 mt-1">Toplam başvuru sayısı (0 = sınırsız)</p>
                                     </div>
                                 </div>
 
