@@ -27,6 +27,7 @@ const navItems = [
     { href: '/yonetim/subscriptions', label: 'Abonelikler', icon: CreditCard },
     { href: '/yonetim/plans', label: 'Planlar & Jetonlar', icon: Coins },
     { href: '/yonetim/jobs', label: 'İş İlanları', icon: Briefcase },
+    { href: '/yonetim/danismanlar', label: 'İş Danışmanlar', icon: Users },
     { href: '/yonetim/sales', label: 'Satış Kayıtları', icon: ShoppingCart },
     { href: '/yonetim/campaigns', label: 'Kampanyalar', icon: Tag },
     { href: '/yonetim/payment-settings', label: 'Ödeme Ayarları', icon: Wallet },
