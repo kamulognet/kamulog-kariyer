@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
                 notes: couponCode ? `Kupon: ${couponCode} | İndirim: ${couponDiscount}₺` : null,
                 // Fatura bilgileri
                 billingName: billingUser?.name || null,
+                billingEmail: billingUser?.email || null,
                 billingPhone: billingUser?.phoneNumber || null,
                 billingAddress: billingUser?.address || null,
                 billingCity: billingUser?.city || null,

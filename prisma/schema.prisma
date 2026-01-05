@@ -74,6 +74,7 @@ model SalesRecord {
   notes            String? // Admin notları
   // Fatura bilgileri (sipariş anındaki kullanıcı bilgileri)
   billingName      String? // Fatura adı soyadı
+  billingEmail     String? // Fatura e-postası
   billingPhone     String? // Fatura telefonu
   billingAddress   String? // Fatura adresi
   billingCity      String? // Fatura şehri
