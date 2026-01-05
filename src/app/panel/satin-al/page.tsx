@@ -668,13 +668,23 @@ export default function PurchasePage() {
                             {/* Telefon & Adres */}
                             <div>
                                 <label className="block text-sm text-slate-400 mb-1">Telefon *</label>
-                                <input
-                                    type="tel"
-                                    value={billingInfo.phoneNumber}
-                                    onChange={(e) => setBillingInfo({ ...billingInfo, phoneNumber: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                    placeholder="+90 5XX XXX XX XX"
-                                />
+                                <div className="flex">
+                                    <span className="inline-flex items-center px-3 bg-slate-700 border border-r-0 border-slate-600 rounded-l-xl text-slate-300 text-sm font-medium">
+                                        +90
+                                    </span>
+                                    <input
+                                        type="tel"
+                                        value={billingInfo.phoneNumber.replace(/^\+90\s*/, '')}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 10)
+                                            setBillingInfo({ ...billingInfo, phoneNumber: value ? `+90${value}` : '' })
+                                        }}
+                                        maxLength={10}
+                                        className="flex-1 px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-r-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                        placeholder="5XX XXX XX XX"
+                                    />
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">10 haneli telefon numarası girin</p>
                             </div>
 
                             <div>

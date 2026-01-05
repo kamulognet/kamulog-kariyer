@@ -15,6 +15,7 @@ interface JobListing {
     sourceUrl: string | null
     applicationUrl: string | null
     deadline: string | null
+    employerPhone: string | null
     createdAt: string
 }
 
@@ -592,6 +593,26 @@ export default function AdminJobsPage() {
                                             onChange={e => setFormData({ ...formData, deadline: e.target.value })}
                                             className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
                                         />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">
+                                            İşveren Telefonu <span className="text-xs text-purple-400">(Sadece Premium)</span>
+                                        </label>
+                                        <div className="flex">
+                                            <span className="inline-flex items-center px-3 bg-slate-700 border border-r-0 border-slate-600 rounded-l-lg text-slate-300 text-sm">+90</span>
+                                            <input
+                                                type="tel"
+                                                value={formData.employerPhone.replace(/^\+90\s*/, '')}
+                                                onChange={e => {
+                                                    const value = e.target.value.replace(/\D/g, '').slice(0, 10)
+                                                    setFormData({ ...formData, employerPhone: value ? `+90${value}` : '' })
+                                                }}
+                                                maxLength={10}
+                                                className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-r-lg text-white"
+                                                placeholder="5XX XXX XX XX"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-purple-400/70 mt-1">Bu numara sadece Premium abonelere gösterilir</p>
                                     </div>
                                 </div>
 

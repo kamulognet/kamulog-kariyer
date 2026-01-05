@@ -16,7 +16,31 @@ export async function GET(req: NextRequest) {
             orderBy: { createdAt: 'desc' },
         })
 
-        return NextResponse.json({ jobs })
+        // Kullanıcının Premium olup olmadığını kontrol et
+        const session = await getServerSession(authOptions)
+        let isPremium = false
+
+        if (session?.user?.id) {
+            const user = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: {
+                    subscription: {
+                        select: { plan: true, status: true }
+                    }
+                }
+            })
+
+            // Sadece PREMIUM ve aktif abonelik
+            isPremium = user?.subscription?.status === 'ACTIVE' && user?.subscription?.plan === 'PREMIUM'
+        }
+
+        // employerPhone'u sadece Premium kullanıcılara göster
+        const safeJobs = jobs.map(job => ({
+            ...job,
+            employerPhone: isPremium ? job.employerPhone : null
+        }))
+
+        return NextResponse.json({ jobs: safeJobs, isPremium })
     } catch (error) {
         console.error('Get jobs error:', error)
         return NextResponse.json({ error: 'İş ilanları yüklenemedi' }, { status: 500 })
@@ -45,6 +69,7 @@ export async function POST(req: NextRequest) {
             applicationUrl: body.applicationUrl || null,
             salary: body.salary || null,
             deadline: body.deadline ? new Date(body.deadline) : null,
+            employerPhone: body.employerPhone || null, // İşveren telefonu (opsiyonel)
         }
 
         const job = await prisma.jobListing.create({
@@ -56,4 +81,3 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: error?.message || 'İlan oluşturulamadı' }, { status: 500 })
     }
 }
-
