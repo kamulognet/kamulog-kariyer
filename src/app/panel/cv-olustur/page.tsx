@@ -66,10 +66,27 @@ export default function CVBuilderPage() {
             const data = await res.json()
             setSessionId(data.sessionId)
 
-            // İlk mesajı gönder
+            // Kullanıcının mevcut fatura bilgilerini kontrol et
+            const userInfo = data.userInfo
+            let welcomeContent = 'Merhaba! 👋 Ben CV asistanınızım. Size profesyonel bir CV oluşturmanızda yardımcı olacağım.\n\n'
+
+            if (userInfo && (userInfo.name || userInfo.address || userInfo.city)) {
+                // Kullanıcının kayıtlı bilgileri var - bunları baz al
+                welcomeContent += '📋 Profilinizden bazı bilgilerinizi aldım:\n'
+                if (userInfo.name) welcomeContent += `• Ad Soyad: **${userInfo.name}**\n`
+                if (userInfo.phone) welcomeContent += `• Telefon: **${userInfo.phone}**\n`
+                if (userInfo.city && userInfo.district) welcomeContent += `• Konum: **${userInfo.city} / ${userInfo.district}**\n`
+                else if (userInfo.city) welcomeContent += `• Şehir: **${userInfo.city}**\n`
+                if (userInfo.address) welcomeContent += `• Adres: **${userInfo.address}**\n`
+                welcomeContent += '\nBu bilgiler CV\'niz için kullanılacak. Eksik veya yanlış bir bilgi var mı? Yoksa devam edelim!'
+            } else {
+                // Kullanıcının kayıtlı bilgisi yok
+                welcomeContent += 'Başlamak için, lütfen adınızı ve soyadınızı söyler misiniz?'
+            }
+
             const welcomeMessage: ChatMessage = {
                 role: 'assistant',
-                content: 'Merhaba! 👋 Ben CV asistanınızım. Size profesyonel bir CV oluşturmanızda yardımcı olacağım.\n\nBaşlamak için, lütfen adınızı ve soyadınızı söyler misiniz?'
+                content: welcomeContent
             }
             setMessages([welcomeMessage])
             setStep('chat')

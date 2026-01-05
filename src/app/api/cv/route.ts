@@ -97,6 +97,52 @@ export async function POST(req: NextRequest) {
         // Kullanımı artır
         await incrementUsage(session.user.id, 'CV_CREATED')
 
+        // CV'den elde edilen adres bilgilerini kullanıcı profiline kaydet (fatura bilgisi yoksa)
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { address: true, city: true }
+        })
+
+        // Eğer kullanıcının fatura adresi boşsa, CV'deki bilgileri kaydet
+        if (!user?.address && cvData.personalInfo) {
+            const updateData: {
+                name?: string
+                phoneNumber?: string
+                address?: string
+                city?: string
+            } = {}
+
+            // CV'den alınan bilgileri kullan
+            if (cvData.personalInfo.fullName) {
+                updateData.name = cvData.personalInfo.fullName
+            }
+            if (cvData.personalInfo.phone) {
+                updateData.phoneNumber = cvData.personalInfo.phone
+            }
+            if (cvData.personalInfo.address) {
+                updateData.address = cvData.personalInfo.address
+
+                // Adres içinden şehir çıkar (örn: "İstanbul, Kadıköy" veya "Ankara")
+                const addressParts = cvData.personalInfo.address.split(',').map((s: string) => s.trim())
+                if (addressParts.length > 0) {
+                    // İlk parça genellikle şehir
+                    const possibleCity = addressParts[0]
+                    if (possibleCity && possibleCity.length > 1) {
+                        updateData.city = possibleCity
+                    }
+                }
+            }
+
+            // Sadece en az bir veri varsa güncelle
+            if (Object.keys(updateData).length > 0) {
+                await prisma.user.update({
+                    where: { id: session.user.id },
+                    data: updateData
+                })
+                console.log(`[CV] Updated user profile with CV data for user ${session.user.id}`)
+            }
+        }
+
         return NextResponse.json({
             message: 'CV oluşturuldu',
             cv: {

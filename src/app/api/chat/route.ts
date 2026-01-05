@@ -141,6 +141,18 @@ export async function PUT(req: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
+        // Kullanıcının fatura bilgilerini al
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: {
+                name: true,
+                phoneNumber: true,
+                address: true,
+                city: true,
+                district: true
+            }
+        })
+
         const chatSession = await prisma.chatSession.create({
             data: {
                 userId: session.user.id,
@@ -148,7 +160,17 @@ export async function PUT(req: NextRequest) {
             },
         })
 
-        return NextResponse.json({ sessionId: chatSession.id })
+        // Kullanıcının mevcut bilgilerini döndür (AI bunu kullanabilir)
+        return NextResponse.json({
+            sessionId: chatSession.id,
+            userInfo: {
+                name: user?.name || '',
+                phone: user?.phoneNumber || '',
+                address: user?.address || '',
+                city: user?.city || '',
+                district: user?.district || ''
+            }
+        })
     } catch (error) {
         console.error('Create session error:', error)
         return NextResponse.json(
