@@ -2,11 +2,12 @@ import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { parsePDFCV } from '@/lib/openai'
 
 // Maksimum dosya boyutu (50MB)
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB in bytes
 
-// PDF dosyasını yükle (AI analizi YOK - sadece metin çıkar ve kaydet)
+// PDF dosyasını yükle ve AI ile analiz et
 export async function POST(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions)
@@ -39,12 +40,11 @@ export async function POST(req: NextRequest) {
         const bytes = await file.arrayBuffer()
         const buffer = new Uint8Array(bytes)
 
-        // unpdf ile PDF'den metin çıkar (canvas gerektirmez, pure JS)
+        // unpdf ile PDF'den metin çıkar
         let pdfText = ''
         try {
             const { extractText } = await import('unpdf')
             const result = await extractText(buffer)
-            // text string veya string array olabilir
             pdfText = Array.isArray(result.text) ? result.text.join('\n') : result.text
             console.log(`[PDF Upload] Extracted text length: ${pdfText.length} characters`)
         } catch (parseError: any) {
@@ -60,26 +60,37 @@ export async function POST(req: NextRequest) {
             }, { status: 400 })
         }
 
-        console.log(`[PDF Upload] Saving CV with raw text...`)
+        console.log(`[PDF Upload] Parsing CV with AI...`)
 
-        // Ham metin olarak CV verisi oluştur (AI analizi YOK)
-        const cvData = {
-            rawText: pdfText,
-            fileName: file.name,
-            uploadedAt: new Date().toISOString(),
-            personalInfo: { fullName: '', email: '', phone: '', address: '', birthDate: '', linkedIn: '' },
-            education: [],
-            experience: [],
-            skills: { technical: [], languages: [], software: [] },
-            certificates: [],
-            summary: '',
+        // AI ile CV verisini parse et
+        let cvData
+        try {
+            cvData = await parsePDFCV(pdfText)
+            cvData.rawText = pdfText // Ham metni de sakla
+            cvData.fileName = file.name
+            cvData.uploadedAt = new Date().toISOString()
+            console.log(`[PDF Upload] AI parsing successful. Name: ${cvData.personalInfo?.fullName || 'unknown'}`)
+        } catch (aiError: any) {
+            console.error('AI parse error:', aiError?.message || aiError)
+            // AI parse başarısız olursa ham metin ile kaydet
+            cvData = {
+                rawText: pdfText,
+                fileName: file.name,
+                uploadedAt: new Date().toISOString(),
+                personalInfo: { fullName: '', email: '', phone: '', address: '', birthDate: '', linkedIn: '' },
+                education: [],
+                experience: [],
+                skills: { technical: [], languages: [], software: [] },
+                certificates: [],
+                summary: '',
+            }
         }
 
         // CV'yi veritabanına kaydet
         const savedCV = await prisma.cV.create({
             data: {
                 userId: session.user.id,
-                title: file.name.replace('.pdf', '').replace('.PDF', ''),
+                title: cvData.personalInfo?.fullName || file.name.replace('.pdf', '').replace('.PDF', ''),
                 data: JSON.stringify(cvData),
                 template: 'modern',
             },
@@ -87,12 +98,57 @@ export async function POST(req: NextRequest) {
 
         console.log(`[PDF Upload] CV saved successfully with ID: ${savedCV.id}`)
 
+        // Kullanıcının fatura bilgisi yoksa CV'den çıkarılan bilgileri kaydet
+        if (cvData.personalInfo) {
+            const user = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { address: true, city: true, phoneNumber: true, name: true }
+            })
+
+            const updateData: Record<string, string> = {}
+
+            // Eksik bilgileri CV'den al
+            if (!user?.name && cvData.personalInfo.fullName) {
+                updateData.name = cvData.personalInfo.fullName
+            }
+            if (!user?.phoneNumber && cvData.personalInfo.phone) {
+                // Telefonu +90 formatına çevir
+                let phone = cvData.personalInfo.phone.replace(/\D/g, '')
+                if (phone.startsWith('90')) phone = phone.slice(2)
+                if (phone.startsWith('0')) phone = phone.slice(1)
+                if (phone.length === 10) {
+                    updateData.phoneNumber = `+90${phone}`
+                }
+            }
+            if (!user?.address && cvData.personalInfo.address) {
+                updateData.address = cvData.personalInfo.address
+
+                // Adres içinden şehir çıkar
+                const addressParts = cvData.personalInfo.address.split(',').map((s: string) => s.trim())
+                if (addressParts.length > 0 && !user?.city) {
+                    const possibleCity = addressParts[0]
+                    if (possibleCity && possibleCity.length > 1) {
+                        updateData.city = possibleCity
+                    }
+                }
+            }
+
+            if (Object.keys(updateData).length > 0) {
+                await prisma.user.update({
+                    where: { id: session.user.id },
+                    data: updateData
+                })
+                console.log(`[PDF Upload] Updated user profile with CV data: ${Object.keys(updateData).join(', ')}`)
+            }
+        }
+
         return NextResponse.json({
             success: true,
             cvId: savedCV.id,
-            message: 'CV başarıyla yüklendi! İş ilanlarıyla eşleşme için "Eşleşen İlanlar" butonunu kullanabilirsiniz.',
+            message: 'CV başarıyla yüklendi ve analiz edildi! İş ilanlarıyla eşleşme için "Eşleşen İlanlar" butonunu kullanabilirsiniz.',
             fileName: file.name,
             textLength: pdfText.length,
+            parsedName: cvData.personalInfo?.fullName || null,
         })
     } catch (error) {
         console.error('PDF upload error:', error)

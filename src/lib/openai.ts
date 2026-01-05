@@ -199,6 +199,9 @@ export interface CVData {
   }>
   summary: string
   missingFields?: string[]
+  rawText?: string
+  fileName?: string
+  uploadedAt?: string
 }
 
 // CV oluşturma chat fonksiyonu

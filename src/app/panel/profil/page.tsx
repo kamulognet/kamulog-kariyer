@@ -377,14 +377,26 @@ export default function ProfilePage() {
                                         </select>
                                     </div>
                                 </div>
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-600/50 text-white font-medium rounded-xl transition shadow-lg shadow-purple-500/20"
-                                >
-                                    <Save className="w-4 h-4" />
-                                    {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-                                </button>
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        type="submit"
+                                        disabled={saving}
+                                        className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-600/50 text-white font-medium rounded-xl transition shadow-lg shadow-purple-500/20"
+                                    >
+                                        <Save className="w-4 h-4" />
+                                        {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setForm({ ...form, address: '', city: '', district: '' })
+                                            setDistricts([])
+                                        }}
+                                        className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium rounded-xl transition"
+                                    >
+                                        Temizle
+                                    </button>
+                                </div>
                             </form>
                         )}
 
