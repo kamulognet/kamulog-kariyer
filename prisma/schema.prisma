@@ -152,6 +152,7 @@ model JobListing {
   applicationUrl String? // Başvuru linki
   salary         String? // Maaş bilgisi
   deadline       DateTime? // Son başvuru tarihi
+  employerPhone  String? // İşveren telefonu (opsiyonel)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   analyses       CVAnalysis[]

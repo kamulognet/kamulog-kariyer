@@ -300,16 +300,27 @@ export default function ProfilePage() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-slate-400">Telefon</label>
-                                        <div className="relative">
-                                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                                            <input
-                                                type="tel"
-                                                value={form.phoneNumber}
-                                                onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-                                                className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                                placeholder="+90 5xx xxx xx xx"
-                                            />
+                                        <div className="relative flex">
+                                            <span className="inline-flex items-center px-3 bg-slate-700 border border-r-0 border-slate-600 rounded-l-xl text-slate-300 text-sm font-medium">
+                                                +90
+                                            </span>
+                                            <div className="relative flex-1">
+                                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                                <input
+                                                    type="tel"
+                                                    value={form.phoneNumber.replace(/^\+90\s*/, '')}
+                                                    onChange={(e) => {
+                                                        // Sadece rakam, max 10 hane
+                                                        const value = e.target.value.replace(/\D/g, '').slice(0, 10)
+                                                        setForm({ ...form, phoneNumber: value ? `+90${value}` : '' })
+                                                    }}
+                                                    maxLength={10}
+                                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-r-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                                                    placeholder="5XX XXX XX XX"
+                                                />
+                                            </div>
                                         </div>
+                                        <p className="text-xs text-slate-500">10 haneli telefon numarası girin</p>
                                     </div>
                                 </div>
                                 <button

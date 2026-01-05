@@ -34,6 +34,7 @@ export default function CVBuilderPage() {
     const [sessionTokenLimit, setSessionTokenLimit] = useState(25)
     const [tokenCost, setTokenCost] = useState(2)
     const [userCvChatTokens, setUserCvChatTokens] = useState(0) // Kullanıcının CV chat jeton bakiyesi
+    const [planCvChatTokens, setPlanCvChatTokens] = useState(20) // Plan için toplam CV chat jetonu
     const usedTokens = messages.filter(m => m.role === 'user').length * tokenCost
     const remainingSessionTokens = Math.max(0, sessionTokenLimit - usedTokens)
 
@@ -51,6 +52,7 @@ export default function CVBuilderPage() {
                     if (data.sessionLimit) setSessionTokenLimit(data.sessionLimit)
                     if (data.tokenCost) setTokenCost(data.tokenCost)
                     if (data.cvChatTokens !== undefined) setUserCvChatTokens(data.cvChatTokens)
+                    if (data.planCvChatTokens !== undefined) setPlanCvChatTokens(data.planCvChatTokens)
                 }
             } catch (e) {
                 console.error('Failed to load chat settings')
@@ -457,9 +459,13 @@ export default function CVBuilderPage() {
                                     <span className="text-blue-400 text-lg">🤖</span>
                                     <span className="text-white font-bold">CV Chat Jeton Bakiyeniz:</span>
                                 </div>
-                                <span className={`text-2xl font-bold ${userCvChatTokens <= 5 ? 'text-red-400' : 'text-green-400'}`}>
-                                    {userCvChatTokens}
-                                </span>
+                                <div className="flex items-center gap-1">
+                                    <span className={`text-2xl font-bold ${userCvChatTokens <= 5 ? 'text-red-400' : 'text-green-400'}`}>
+                                        {userCvChatTokens}
+                                    </span>
+                                    <span className="text-slate-400 text-lg">/</span>
+                                    <span className="text-slate-300 text-lg">{planCvChatTokens}</span>
+                                </div>
                             </div>
 
                             {/* Sohbet Limiti */}

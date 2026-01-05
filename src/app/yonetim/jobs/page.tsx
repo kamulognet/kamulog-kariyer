@@ -32,6 +32,7 @@ export default function AdminJobsPage() {
     const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set())
     const [showExpiredOnly, setShowExpiredOnly] = useState(false)
     const [bulkDeleting, setBulkDeleting] = useState(false)
+    const [typeFilter, setTypeFilter] = useState<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL')
 
     // Şehir listesi
     const [cities, setLocationCities] = useState<string[]>([])
@@ -47,7 +48,8 @@ export default function AdminJobsPage() {
         sourceUrl: '',
         applicationUrl: '',
         salary: '',
-        deadline: ''
+        deadline: '',
+        employerPhone: ''
     })
 
     useEffect(() => {
@@ -184,7 +186,8 @@ export default function AdminJobsPage() {
                     sourceUrl: '',
                     applicationUrl: '',
                     salary: '',
-                    deadline: ''
+                    deadline: '',
+                    employerPhone: ''
                 })
                 loadJobs()
             } else {
@@ -256,6 +259,11 @@ export default function AdminJobsPage() {
     // Süresi geçmiş filtresi
     if (showExpiredOnly) {
         filteredJobs = filteredJobs.filter(job => isExpired(job.deadline))
+    }
+
+    // Tür filtresi (Kamu/Özel)
+    if (typeFilter !== 'ALL') {
+        filteredJobs = filteredJobs.filter(job => job.type === typeFilter)
     }
 
     return (
@@ -348,6 +356,15 @@ export default function AdminJobsPage() {
                             Tüm Geçmişleri Seç
                         </button>
                     )}
+                    <select
+                        value={typeFilter}
+                        onChange={(e) => setTypeFilter(e.target.value as 'ALL' | 'PUBLIC' | 'PRIVATE')}
+                        className="px-4 py-2 bg-slate-700 border border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                        <option value="ALL">Tüm İlanlar</option>
+                        <option value="PUBLIC">🏛️ Kamu</option>
+                        <option value="PRIVATE">🏢 Özel Sektör</option>
+                    </select>
                 </div>
             </div>
 
