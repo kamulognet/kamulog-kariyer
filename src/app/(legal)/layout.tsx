@@ -28,6 +28,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
                         <Link href="/kvkk" className="hover:text-purple-400 transition">KVKK</Link>
                         <Link href="/gizlilik" className="hover:text-purple-400 transition">Gizlilik Politikası</Link>
                         <Link href="/kullanim-kosullari" className="hover:text-purple-400 transition">Kullanım Koşulları</Link>
+                        <Link href="/cerez-politikasi" className="hover:text-purple-400 transition">Çerez Politikası</Link>
                     </div>
                     <p className="mt-4 text-xs">
                         Veri Sorumlusu: Suat Hayri Şahin – Kamulog.net<br />
