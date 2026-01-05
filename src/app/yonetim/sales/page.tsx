@@ -19,7 +19,7 @@ import {
     Square,
     AlertTriangle
 } from 'lucide-react'
-import { showSuccess, showError, showWarning } from '@/components/ToastProvider'
+import { useToast } from '@/components/ToastProvider'
 
 interface SalesRecord {
     id: string
@@ -62,6 +62,7 @@ const planColors: Record<string, string> = {
 }
 
 export default function AdminSalesPage() {
+    const { showSuccess, showError } = useToast()
     const [sales, setSales] = useState<SalesRecord[]>([])
     const [pagination, setPagination] = useState<Pagination | null>(null)
     const [stats, setStats] = useState<Stats | null>(null)
