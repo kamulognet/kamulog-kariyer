@@ -2,7 +2,7 @@
 
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
-import { User, LogOut, Shield, LayoutDashboard, FileText, Briefcase, Coins, Sparkles } from 'lucide-react'
+import { User, LogOut, Shield, LayoutDashboard, FileText, Briefcase, Coins, Sparkles, Phone } from 'lucide-react'
 import { useToast } from '@/components/ToastProvider'
 
 export default function PanelHeader() {
@@ -38,6 +38,10 @@ export default function PanelHeader() {
                             <Link href="/panel/ilanlar" className="text-slate-400 hover:text-white transition text-sm font-medium flex items-center gap-1.5">
                                 <Briefcase className="w-4 h-4" />
                                 İş İlanları
+                            </Link>
+                            <Link href="/panel/danismanlik" className="text-purple-400 hover:text-purple-300 transition text-sm font-medium flex items-center gap-1.5 bg-purple-500/10 px-2 py-1 rounded-lg border border-purple-500/30">
+                                <Phone className="w-4 h-4" />
+                                Kariyer Danışmanlığı
                             </Link>
                         </nav>
                     </div>
