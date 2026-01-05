@@ -33,6 +33,7 @@ export default function CVBuilderPage() {
     // Jeton limiti state'leri
     const [sessionTokenLimit, setSessionTokenLimit] = useState(25)
     const [tokenCost, setTokenCost] = useState(2)
+    const [userCvChatTokens, setUserCvChatTokens] = useState(0) // Kullanıcının CV chat jeton bakiyesi
     const usedTokens = messages.filter(m => m.role === 'user').length * tokenCost
     const remainingSessionTokens = Math.max(0, sessionTokenLimit - usedTokens)
 
@@ -49,6 +50,7 @@ export default function CVBuilderPage() {
                     const data = await res.json()
                     if (data.sessionLimit) setSessionTokenLimit(data.sessionLimit)
                     if (data.tokenCost) setTokenCost(data.tokenCost)
+                    if (data.cvChatTokens !== undefined) setUserCvChatTokens(data.cvChatTokens)
                 }
             } catch (e) {
                 console.error('Failed to load chat settings')
@@ -430,40 +432,54 @@ export default function CVBuilderPage() {
 
                 {step === 'chat' && (
                     <div className="h-[calc(100vh-200px)]">
-                        {/* Jeton Limiti Gösterge Kutusu */}
-                        <div className="mb-4 p-3 bg-slate-800/50 border border-slate-700 rounded-xl flex items-center justify-between">
-                            <div className="flex items-center gap-4">
+                        {/* Jeton Bakiyesi ve Session Limiti */}
+                        <div className="mb-4 p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
+                            {/* Toplam Bakiye */}
+                            <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-slate-400 text-sm">Sohbet Limiti:</span>
-                                    <span className="text-white font-medium">{sessionTokenLimit} jeton</span>
+                                    <span className="text-blue-400 text-lg">🤖</span>
+                                    <span className="text-white font-bold">CV Chat Jeton Bakiyeniz:</span>
                                 </div>
-                                <div className="w-px h-4 bg-slate-600"></div>
+                                <span className={`text-2xl font-bold ${userCvChatTokens <= 5 ? 'text-red-400' : 'text-green-400'}`}>
+                                    {userCvChatTokens}
+                                </span>
+                            </div>
+
+                            {/* Sohbet Limiti */}
+                            <div className="flex items-center gap-4 pt-3 border-t border-slate-700">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-slate-400 text-sm">Kullanılan:</span>
-                                    <span className="text-yellow-400 font-medium">{usedTokens} jeton</span>
+                                    <span className="text-slate-400 text-sm">Bu Sohbet:</span>
+                                    <span className="text-white font-medium">{usedTokens}/{sessionTokenLimit}</span>
                                 </div>
                                 <div className="w-px h-4 bg-slate-600"></div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-slate-400 text-sm">Kalan:</span>
                                     <span className={`font-medium ${remainingSessionTokens <= 5 ? 'text-red-400' : 'text-green-400'}`}>
-                                        {remainingSessionTokens} jeton
+                                        {remainingSessionTokens}
                                     </span>
                                 </div>
-                            </div>
-                            <div className="text-xs text-slate-500">
-                                Her mesaj {tokenCost} jeton
+                                <div className="flex-1 text-right text-xs text-slate-500">
+                                    Her mesaj {tokenCost} jeton
+                                </div>
                             </div>
                         </div>
 
-                        {/* Limit uyarısı */}
-                        {remainingSessionTokens <= 5 && remainingSessionTokens > 0 && (
+                        {/* Bakiye uyarısı */}
+                        {userCvChatTokens <= 5 && userCvChatTokens > 0 && (
                             <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm">
-                                ⚠️ Sohbet jetonunuz azaldı! Kalan {remainingSessionTokens} jeton.
+                                ⚠️ CV chat jetonunuz azalıyor! Kalan: {userCvChatTokens} jeton
                             </div>
                         )}
-                        {remainingSessionTokens <= 0 && (
+                        {userCvChatTokens <= 0 && (
                             <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
-                                🚫 Bu sohbette jeton limitine ulaştınız. Yeni CV oluşturmak için yeni bir sohbet başlatın.
+                                🚫 CV chat jetonunuz bitti. Yeni jeton almak için aboneliğinizi yükseltin.
+                            </div>
+                        )}
+
+                        {/* Session limit uyarısı */}
+                        {remainingSessionTokens <= 0 && (
+                            <div className="mb-4 p-3 bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 text-sm">
+                                ⚠️ Bu sohbette session limitine ulaştınız ({sessionTokenLimit} jeton). Yeni CV başlatın.
                             </div>
                         )}
 

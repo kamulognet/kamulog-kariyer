@@ -16,13 +16,16 @@ export async function GET() {
         const tokenCost = DEFAULT_TOKEN_COST
         let cvApplicationLimit = 3
         let cvApplicationsUsed = 0
+        let cvChatTokens = 0 // Kullanıcının mevcut CV chat jetonu
+        let planCvChatTokens = 20 // Plan için ayrılan CV chat jetonu
 
         if (session?.user?.id) {
-            // Kullanıcının aboneliğini al
+            // Kullanıcının bilgilerini al
             const user = await prisma.user.findUnique({
                 where: { id: session.user.id },
                 select: {
                     cvApplicationsUsed: true,
+                    cvChatTokens: true,
                     subscription: {
                         select: { plan: true, status: true }
                     }
@@ -30,6 +33,8 @@ export async function GET() {
             })
 
             cvApplicationsUsed = user?.cvApplicationsUsed || 0
+            cvChatTokens = user?.cvChatTokens || 0
+
             const userPlan = user?.subscription?.status === 'ACTIVE'
                 ? user.subscription.plan
                 : 'FREE'
@@ -46,16 +51,19 @@ export async function GET() {
                 if (currentPlan) {
                     sessionLimit = currentPlan.chatLimit || DEFAULT_SESSION_LIMIT
                     cvApplicationLimit = currentPlan.cvApplicationLimit || 3
+                    planCvChatTokens = currentPlan.cvChatTokens || 20
                 }
             }
         }
 
         return NextResponse.json({
-            sessionLimit,
-            tokenCost,
-            cvApplicationLimit,
-            cvApplicationsUsed,
-            cvApplicationsRemaining: cvApplicationLimit === 0 ? -1 : Math.max(0, cvApplicationLimit - cvApplicationsUsed)
+            sessionLimit,          // Sohbet başına limit (chatLimit)
+            tokenCost,             // Mesaj başına maliyet
+            cvApplicationLimit,    // CV başvuru limiti
+            cvApplicationsUsed,    // Kullanılan CV başvuru
+            cvApplicationsRemaining: cvApplicationLimit === 0 ? -1 : Math.max(0, cvApplicationLimit - cvApplicationsUsed),
+            cvChatTokens,          // Kullanıcının mevcut CV chat jetonu
+            planCvChatTokens       // Plan için ayrılan toplam
         })
     } catch (error) {
         console.error('Get chat limits error:', error)
@@ -64,8 +72,9 @@ export async function GET() {
             tokenCost: DEFAULT_TOKEN_COST,
             cvApplicationLimit: 3,
             cvApplicationsUsed: 0,
-            cvApplicationsRemaining: 3
+            cvApplicationsRemaining: 3,
+            cvChatTokens: 0,
+            planCvChatTokens: 20
         })
     }
 }
-
