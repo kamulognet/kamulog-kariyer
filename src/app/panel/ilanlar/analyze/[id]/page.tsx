@@ -27,6 +27,12 @@ interface AnalysisResult {
     feedback: string
 }
 
+interface InsufficientCreditsData {
+    show: boolean
+    required: number
+    current: number
+}
+
 export default function JobAnalyzePage() {
     const { data: session, status } = useSession()
     const router = useRouter()
@@ -40,6 +46,7 @@ export default function JobAnalyzePage() {
     const [result, setResult] = useState<AnalysisResult | null>(null)
     const [loading, setLoading] = useState(true)
     const [notification, setNotification] = useState<{ show: boolean; type: 'info' | 'error' | 'success'; message: string }>({ show: false, type: 'info', message: '' })
+    const [insufficientCredits, setInsufficientCredits] = useState<InsufficientCreditsData>({ show: false, required: 0, current: 0 })
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -79,6 +86,22 @@ export default function JobAnalyzePage() {
                 body: JSON.stringify({ cvId: selectedCvId, jobId }),
             })
             const data = await res.json()
+
+            // Yetersiz jeton kontrolü
+            if (res.status === 403 && data.required) {
+                setInsufficientCredits({
+                    show: true,
+                    required: data.required,
+                    current: data.credits || 0
+                })
+                return
+            }
+
+            if (!res.ok) {
+                showError(data.error || 'Analiz yapılamadı')
+                return
+            }
+
             if (data.analysis) {
                 setResult({
                     score: data.analysis.score,
@@ -91,6 +114,7 @@ export default function JobAnalyzePage() {
             }
         } catch (error) {
             console.error('Analysis error:', error)
+            showError('Bir hata oluştu')
         } finally {
             setAnalyzing(false)
         }
@@ -313,6 +337,76 @@ export default function JobAnalyzePage() {
                                 className="mt-4 w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
                             >
                                 Tamam
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Yetersiz Jeton Modal - Abonelik Planları */}
+                {insufficientCredits.show && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-slate-800 rounded-2xl p-6 max-w-lg w-full border border-yellow-500/30 animate-in fade-in zoom-in duration-300">
+                            <div className="flex items-start gap-4 mb-6">
+                                <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                                    <AlertCircle className="w-6 h-6 text-yellow-400" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-semibold text-xl text-white mb-2">Yetersiz Jeton</h3>
+                                    <p className="text-slate-300 text-sm">
+                                        Bu analiz için <strong className="text-yellow-400">{insufficientCredits.required} jeton</strong> gerekiyor.
+                                        Mevcut bakiyeniz: <strong className="text-red-400">{insufficientCredits.current} jeton</strong>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <p className="text-slate-400 text-sm mb-4">Jeton satın almak için bir plan seçin:</p>
+
+                                <div className="grid gap-3">
+                                    {/* Basic Plan */}
+                                    <div
+                                        onClick={() => router.push('/panel/abone-ol?plan=BASIC')}
+                                        className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl cursor-pointer hover:bg-blue-500/20 transition group"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h4 className="text-blue-400 font-semibold">🚀 Basic Plan</h4>
+                                                <p className="text-slate-400 text-sm">50 jeton dahil</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-2xl font-bold text-white">₺99</span>
+                                                <p className="text-xs text-slate-500">/ay</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Premium Plan */}
+                                    <div
+                                        onClick={() => router.push('/panel/abone-ol?plan=PREMIUM')}
+                                        className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl cursor-pointer hover:bg-purple-500/20 transition group relative overflow-hidden"
+                                    >
+                                        <div className="absolute top-2 right-2 bg-purple-500 text-white text-xs px-2 py-0.5 rounded-full">
+                                            En Popüler
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h4 className="text-purple-400 font-semibold">👑 Premium Plan</h4>
+                                                <p className="text-slate-400 text-sm">1000 jeton + Tüm özellikler</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-2xl font-bold text-white">₺299</span>
+                                                <p className="text-xs text-slate-500">/ay</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setInsufficientCredits({ show: false, required: 0, current: 0 })}
+                                className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
+                            >
+                                Vazgeç
                             </button>
                         </div>
                     </div>
