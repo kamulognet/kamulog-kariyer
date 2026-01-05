@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
             finalPrice = Math.max(0, originalPrice - discountAmount)
         }
 
-        // %100 indirim kontrolü
-        const isFree = coupon.discountType === 'PERCENT' && coupon.discountValue >= 100
+        // %100 indirim veya ücretsiz olma kontrolü
+        const isFree = finalPrice <= 0 || (coupon.discountType === 'PERCENT' && coupon.discountValue >= 100)
 
         return NextResponse.json({
             valid: true,
