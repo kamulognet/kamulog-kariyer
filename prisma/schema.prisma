@@ -62,19 +62,27 @@ model AdminLog {
 
 // Satış kayıtları - Abonelik satışlarını takip eder
 model SalesRecord {
-  id             String   @id @default(cuid())
-  orderNumber    String   @unique // Benzersiz sipariş numarası: KK-XXXXXX
-  userId         String
-  subscriptionId String?
-  plan           String // BASIC, PREMIUM
-  amount         Float // Satış tutarı
-  currency       String   @default("TRY")
-  paymentMethod  String? // HAVALE, KREDI_KARTI, etc.
-  status         String   @default("COMPLETED") // PENDING, COMPLETED, CANCELLED, REFUNDED
-  notes          String? // Admin notları
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  orderNumber      String   @unique // Benzersiz sipariş numarası: KK-XXXXXX
+  userId           String
+  subscriptionId   String?
+  plan             String // BASIC, PREMIUM
+  amount           Float // Satış tutarı
+  currency         String   @default("TRY")
+  paymentMethod    String? // HAVALE, KREDI_KARTI, etc.
+  status           String   @default("COMPLETED") // PENDING, COMPLETED, CANCELLED, REFUNDED
+  notes            String? // Admin notları
+  // Fatura bilgileri (sipariş anındaki kullanıcı bilgileri)
+  billingName      String? // Fatura adı soyadı
+  billingPhone     String? // Fatura telefonu
+  billingAddress   String? // Fatura adresi
+  billingCity      String? // Fatura şehri
+  billingDistrict  String? // Fatura ilçesi
+  billingTaxNumber String? // Vergi numarası
+  billingTaxOffice String? // Vergi dairesi
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([orderNumber])
   @@index([userId])

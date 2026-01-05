@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
-import { ArrowLeft, Coins, LogOut, User } from 'lucide-react'
+import { ArrowLeft, Coins, LogOut, User, Phone } from 'lucide-react'
 
 export default function Navbar() {
     const router = useRouter()
@@ -31,6 +31,14 @@ export default function Navbar() {
                             <ArrowLeft className="w-4 h-4" />
                             <span className="hidden sm:inline">Geri</span>
                         </button>
+
+                        <Link
+                            href="/panel/danismanlik"
+                            className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition text-sm px-3 py-1.5 rounded-lg hover:bg-purple-500/10 border border-purple-500/30"
+                        >
+                            <Phone className="w-4 h-4" />
+                            <span className="hidden sm:inline">Danışmanlık</span>
+                        </Link>
                     </div>
 
                     {/* Sağ taraf: Kredi ve Profil */}

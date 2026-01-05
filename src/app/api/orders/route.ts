@@ -66,17 +66,39 @@ export async function POST(request: NextRequest) {
                 console.error('Error incrementing coupon usage:', e)
             }
         }
+        // Kullanıcı fatura bilgilerini al
+        const billingUser = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: {
+                name: true,
+                email: true,
+                phoneNumber: true,
+                address: true,
+                city: true,
+                district: true,
+                taxNumber: true,
+                taxOffice: true
+            }
+        })
 
-        // Satış kaydı oluştur
+        // Satış kaydı oluştur (fatura bilgileri ile)
         const salesRecord = await prisma.salesRecord.create({
             data: {
                 userId: session.user.id,
                 plan: String(plan),
                 amount: Number(amount),
-                status: isFree ? 'COMPLETED' : 'PENDING', // Ücretsiz siparişler direkt tamamlanır
+                status: isFree ? 'COMPLETED' : 'PENDING',
                 orderNumber,
                 paymentMethod: isFree ? 'COUPON_100' : 'BANK_TRANSFER',
-                notes: couponCode ? `Kupon: ${couponCode} | İndirim: ${couponDiscount}₺` : null
+                notes: couponCode ? `Kupon: ${couponCode} | İndirim: ${couponDiscount}₺` : null,
+                // Fatura bilgileri
+                billingName: billingUser?.name || null,
+                billingPhone: billingUser?.phoneNumber || null,
+                billingAddress: billingUser?.address || null,
+                billingCity: billingUser?.city || null,
+                billingDistrict: billingUser?.district || null,
+                billingTaxNumber: billingUser?.taxNumber || null,
+                billingTaxOffice: billingUser?.taxOffice || null
             }
         })
 
