@@ -57,14 +57,14 @@ export async function GET(request: NextRequest) {
 
         // Belirli danışmanın sohbetleri
         if (consultantId) {
-            const consultant = consultants.find(c => c.id === consultantId)
+            const consultant = consultants.find((c: { id: string }) => c.id === consultantId)
             return NextResponse.json({ consultant })
         }
 
         // Genel istatistikler
         const stats = {
             totalConsultants: consultants.length,
-            totalRooms: consultants.reduce((sum, c) => sum + c._count.chatRooms, 0),
+            totalRooms: consultants.reduce((sum: number, c: { _count: { chatRooms: number } }) => sum + c._count.chatRooms, 0),
             totalMessages: await prisma.chatMessage.count()
         }
 
