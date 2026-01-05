@@ -95,7 +95,17 @@ export async function GET(request: NextRequest) {
                 where,
                 include: {
                     user: {
-                        select: { id: true, name: true, email: true, phoneNumber: true }
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            phoneNumber: true,
+                            address: true,
+                            city: true,
+                            district: true,
+                            taxNumber: true,
+                            taxOffice: true
+                        }
                     }
                 },
                 orderBy: { createdAt: 'desc' },

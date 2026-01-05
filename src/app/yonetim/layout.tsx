@@ -33,7 +33,6 @@ const navItems = [
     { href: '/yonetim/whatsapp', label: 'WhatsApp Butonu', icon: MessageCircle },
     { href: '/yonetim/content', label: 'Sayfa İçerikleri', icon: Globe },
     { href: '/yonetim/logs', label: 'Sistem Logları', icon: FileText },
-    { href: '/yonetim/settings', label: 'Ayarlar', icon: Settings },
 ]
 
 
@@ -87,7 +86,7 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
                 </div>
 
                 {/* Navigation */}
-                <nav className="p-4 space-y-1">
+                <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-180px)]">
                     {navItems.map((item) => {
                         const isActive = pathname === item.href ||
                             (item.href !== '/yonetim' && pathname.startsWith(item.href))
@@ -109,8 +108,18 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
                     })}
                 </nav>
 
-                {/* Bottom Actions */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5">
+                {/* Bottom Actions - Settings & Panel butonları */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/5 bg-slate-900/80 backdrop-blur-xl space-y-2">
+                    <Link
+                        href="/yonetim/settings"
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${pathname === '/yonetim/settings'
+                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            }`}
+                    >
+                        <Settings className="w-5 h-5" />
+                        <span className="font-medium">Ayarlar</span>
+                    </Link>
                     <Link
                         href="/panel"
                         className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition"

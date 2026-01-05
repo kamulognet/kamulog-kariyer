@@ -33,7 +33,17 @@ interface SalesRecord {
     status: string
     notes: string | null
     createdAt: string
-    user: { id: string; name: string | null; email: string; phoneNumber: string | null }
+    user: {
+        id: string
+        name: string | null
+        email: string
+        phoneNumber: string | null
+        address: string | null
+        city: string | null
+        district: string | null
+        taxNumber: string | null
+        taxOffice: string | null
+    }
 }
 
 interface Pagination {
@@ -814,6 +824,42 @@ export default function AdminSalesPage() {
                                     <p className="text-slate-300 mt-1">{selectedSale.notes}</p>
                                 </div>
                             )}
+
+                            {/* Fatura Bilgileri */}
+                            <div className="pt-4 border-t border-slate-700">
+                                <h3 className="text-sm font-semibold text-purple-400 mb-3">📋 Fatura Bilgileri</h3>
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <label className="text-slate-500">Telefon</label>
+                                        <p className="text-white">{selectedSale.user.phoneNumber || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-500">Şehir / İlçe</label>
+                                        <p className="text-white">
+                                            {selectedSale.user.city && selectedSale.user.district
+                                                ? `${selectedSale.user.city} / ${selectedSale.user.district}`
+                                                : selectedSale.user.city || '-'
+                                            }
+                                        </p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="text-slate-500">Adres</label>
+                                        <p className="text-white">{selectedSale.user.address || '-'}</p>
+                                    </div>
+                                    {(selectedSale.user.taxNumber || selectedSale.user.taxOffice) && (
+                                        <>
+                                            <div>
+                                                <label className="text-slate-500">Vergi No</label>
+                                                <p className="text-white">{selectedSale.user.taxNumber || '-'}</p>
+                                            </div>
+                                            <div>
+                                                <label className="text-slate-500">Vergi Dairesi</label>
+                                                <p className="text-white">{selectedSale.user.taxOffice || '-'}</p>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
