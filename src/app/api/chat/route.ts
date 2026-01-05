@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
             message: response,
             isFinished,
             creditsUsed: tokenCost,
-            remainingCredits: updatedUser.credits,
+            remainingCredits: updatedUser.cvChatTokens,
         })
     } catch (error: unknown) {
         console.error('Chat error:', error)
