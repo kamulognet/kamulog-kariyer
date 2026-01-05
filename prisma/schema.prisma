@@ -211,3 +211,27 @@ model Consultant {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// Medya Kategorileri - Admin görsel yönetimi
+model MediaCategory {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  media     Media[]
+}
+
+// Medya Dosyaları - Yüklenen görseller
+model Media {
+  id         String         @id @default(cuid())
+  filename   String
+  url        String
+  mimeType   String?
+  size       Int?
+  categoryId String?
+  createdAt  DateTime       @default(now())
+  category   MediaCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([categoryId])
+  @@index([createdAt])
+}

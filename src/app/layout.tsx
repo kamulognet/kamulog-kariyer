@@ -5,6 +5,7 @@ import Providers from "@/components/Providers";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { ToastProvider } from "@/components/ToastProvider";
 import CookieConsent from "@/components/CookieConsent";
+import WelcomeToast from "@/components/WelcomeToast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -156,6 +157,7 @@ export default function RootLayout({
           </ToastProvider>
           <WhatsAppButton />
           <CookieConsent />
+          <WelcomeToast />
         </Providers>
       </body>
     </html>
