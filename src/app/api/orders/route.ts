@@ -12,7 +12,7 @@ function generateOrderNumber() {
 }
 
 // Plan tokenlarını al
-async function getPlanTokens(planId: string): Promise<number> {
+async function getPlanTokens(planId: string): Promise<{ tokens: number, cvChatTokens: number }> {
     try {
         const setting = await prisma.siteSettings.findUnique({
             where: { key: 'subscription_plans' }
@@ -20,12 +20,15 @@ async function getPlanTokens(planId: string): Promise<number> {
         if (setting?.value) {
             const plans = JSON.parse(setting.value)
             const plan = plans.find((p: any) => p.id === planId)
-            return plan?.tokens || 0
+            return {
+                tokens: plan?.tokens || 0,
+                cvChatTokens: plan?.cvChatTokens || 0
+            }
         }
     } catch (e) {
         console.error('Error getting plan tokens:', e)
     }
-    return 0
+    return { tokens: 0, cvChatTokens: 0 }
 }
 
 // POST - Yeni sipariş oluştur
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
 
         // %100 indirimli kupon = Otomatik aktivasyon
         if (isFree) {
-            const tokens = await getPlanTokens(plan)
+            const planTokens = await getPlanTokens(plan)
 
             // Abonelik oluştur/güncelle
             await prisma.subscription.upsert({
@@ -101,14 +104,15 @@ export async function POST(request: NextRequest) {
                 }
             })
 
-            // Jetonları yükle
-            if (tokens > 0) {
-                await prisma.user.update({
-                    where: { id: session.user.id },
-                    data: { credits: { increment: tokens } }
-                })
-                console.log(`Auto-activated subscription for user ${session.user.id}. Added ${tokens} tokens.`)
-            }
+            // Jetonları yükle (hem genel krediler hem CV chat jetonları)
+            await prisma.user.update({
+                where: { id: session.user.id },
+                data: {
+                    credits: { increment: planTokens.tokens },
+                    cvChatTokens: { increment: planTokens.cvChatTokens }
+                }
+            })
+            console.log(`Auto-activated subscription for user ${session.user.id}. Added ${planTokens.tokens} credits and ${planTokens.cvChatTokens} cvChatTokens.`)
         }
 
         // Kullanıcı bilgilerini al

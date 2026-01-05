@@ -11,6 +11,7 @@ interface Plan {
     name: string
     price: number
     tokens: number
+    cvChatTokens: number     // AI CV sohbet jetonları
     chatLimit: number        // Sohbet jeton limiti (0 = sınırsız)
     cvApplicationLimit: number // CV başvuru sayısı limiti (0 = sınırsız)
     features: string[]
@@ -112,6 +113,7 @@ export default function AdminPlansPage() {
             name: 'Yeni Plan',
             price: 0,
             tokens: 0,
+            cvChatTokens: 50,
             chatLimit: 20,
             cvApplicationLimit: 10,
             features: ['Özellik 1'],
@@ -222,6 +224,20 @@ export default function AdminPlansPage() {
                                             className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
                                         />
                                     </div>
+                                </div>
+
+                                {/* CV Chat Jetonları */}
+                                <div className="mb-6 p-4 bg-blue-500/10 rounded-xl border border-blue-500/30">
+                                    <label className="block text-sm text-blue-400 mb-2 flex items-center gap-2">
+                                        🤖 AI CV Sohbet Jetonları
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={plan.cvChatTokens || 0}
+                                        onChange={(e) => updatePlan(planIndex, 'cvChatTokens', Number(e.target.value))}
+                                        className="w-full px-4 py-2 bg-slate-700 border border-blue-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <p className="text-xs text-blue-400/70 mt-1">Bu plan için yüklenen AI CV sohbet jetonu (genel jetonlardan bağımsız)</p>
                                 </div>
 
                                 {/* Limitler */}

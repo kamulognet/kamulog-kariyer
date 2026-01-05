@@ -14,7 +14,8 @@ model User {
   name                String?
   phoneNumber         String?
   role                String    @default("USER") // USER, ADMIN
-  credits             Int       @default(10) // Başlangıç kredisi
+  credits             Int       @default(10) // Genel krediler
+  cvChatTokens        Int       @default(20) // CV AI sohbet jetonları (ayrı)
   cvApplicationsUsed  Int       @default(0) // Kullanılan CV başvuru sayısı
   emailVerified       DateTime?
   verificationCode    String?

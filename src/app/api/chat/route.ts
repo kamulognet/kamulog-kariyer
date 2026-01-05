@@ -75,28 +75,28 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Kullanıcı jeton kontrolü
+        // Kullanıcı CV Chat jeton kontrolü (ayrı jeton havuzu)
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { credits: true }
+            select: { cvChatTokens: true }
         })
 
-        if (!user || user.credits < tokenCost) {
+        if (!user || user.cvChatTokens < tokenCost) {
             return NextResponse.json({
-                error: `Bu mesaj için ${tokenCost} jeton gerekiyor. Mevcut jetonunuz: ${user?.credits || 0}`,
-                credits: user?.credits || 0,
+                error: `Bu mesaj için ${tokenCost} jeton gerekiyor. Mevcut CV sohbet jetonunuz: ${user?.cvChatTokens || 0}`,
+                cvChatTokens: user?.cvChatTokens || 0,
                 required: tokenCost,
             }, { status: 403 })
         }
 
-        // Jetonları düş
+        // CV Chat jetonlarını düş (genel krediler değil)
         const updatedUser = await prisma.user.update({
             where: { id: session.user.id },
-            data: { credits: { decrement: tokenCost } },
-            select: { credits: true }
+            data: { cvChatTokens: { decrement: tokenCost } },
+            select: { cvChatTokens: true }
         })
 
-        console.log(`[CV Chat] Deducted ${tokenCost} tokens from user ${session.user.id}. New balance: ${updatedUser.credits}`)
+        console.log(`[CV Chat] Deducted ${tokenCost} cvChatTokens from user ${session.user.id}. New balance: ${updatedUser.cvChatTokens}`)
 
         // OpenAI chat
         const rawResponse = await generateCVChat(messages as ChatMessage[])

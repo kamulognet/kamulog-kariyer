@@ -9,8 +9,9 @@ const DEFAULT_SUBSCRIPTION_PLANS = [
         id: 'FREE',
         name: 'Ücretsiz',
         price: 0,
-        tokens: 10,
-        chatLimit: 20,           // Sohbet başına jeton limiti
+        tokens: 10,             // Genel jetonlar
+        cvChatTokens: 20,       // AI CV sohbet jetonları (ayrı)
+        chatLimit: 20,          // Sohbet başına jeton limiti
         cvApplicationLimit: 3,  // CV başvuru sayısı limiti
         features: [
             '1 CV oluşturma',
@@ -25,11 +26,12 @@ const DEFAULT_SUBSCRIPTION_PLANS = [
         name: 'Plus',
         price: 79,
         tokens: 100,
+        cvChatTokens: 100,
         chatLimit: 50,
         cvApplicationLimit: 25,
         features: [
             '10 CV oluşturma',
-            '50 AI sohbet mesajı',
+            '100 AI sohbet mesajı',
             '25 iş başvurusu',
             'PDF CV yükleme & analiz',
             'Öncelikli destek',
@@ -42,8 +44,9 @@ const DEFAULT_SUBSCRIPTION_PLANS = [
         name: 'Premium',
         price: 149,
         tokens: 500,
+        cvChatTokens: 500,
         chatLimit: 0,           // 0 = sınırsız
-        cvApplicationLimit: 0, // 0 = sınırsız
+        cvApplicationLimit: 0,  // 0 = sınırsız
         features: [
             'Sınırsız CV oluşturma',
             'Sınırsız AI sohbet',
