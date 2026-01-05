@@ -25,6 +25,10 @@ export default function ProfilePage() {
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
     const [activeTab, setActiveTab] = useState<'personal' | 'billing' | 'subscription' | 'account'>('personal')
 
+    // Şehir/İlçe seçenekleri
+    const [cities, setCities] = useState<string[]>([])
+    const [districts, setDistricts] = useState<string[]>([])
+
     const [form, setForm] = useState({
         name: '',
         phoneNumber: '',
@@ -44,7 +48,36 @@ export default function ProfilePage() {
 
     useEffect(() => {
         loadProfile()
+        loadCities()
     }, [])
+
+    // Şehir listesini yükle
+    const loadCities = async () => {
+        try {
+            const res = await fetch('/api/locations')
+            const data = await res.json()
+            setCities(data.cities || [])
+        } catch (e) {
+            console.error('Şehirler yüklenemedi', e)
+        }
+    }
+
+    // Şehir değiştiğinde ilçeleri yükle
+    const handleCityChange = async (city: string) => {
+        setForm({ ...form, city, district: '' })
+        if (city) {
+            try {
+                const res = await fetch(`/api/locations?city=${encodeURIComponent(city)}`)
+                const data = await res.json()
+                setDistricts(data.districts || [])
+            } catch (e) {
+                console.error('İlçeler yüklenemedi', e)
+                setDistricts([])
+            }
+        } else {
+            setDistricts([])
+        }
+    }
 
     const loadProfile = async () => {
         try {
@@ -62,6 +95,17 @@ export default function ProfilePage() {
                     taxOffice: data.user.taxOffice || '',
                     currentEmail: data.user.email || ''
                 }))
+
+                // Şehir varsa ilçeleri de yükle
+                if (data.user.city) {
+                    try {
+                        const distRes = await fetch(`/api/locations?city=${encodeURIComponent(data.user.city)}`)
+                        const distData = await distRes.json()
+                        setDistricts(distData.districts || [])
+                    } catch (e) {
+                        console.error('İlçeler yüklenemedi', e)
+                    }
+                }
             }
         } catch (error) {
             console.error('Error loading profile:', error)
@@ -296,23 +340,30 @@ export default function ProfilePage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-slate-400">Şehir</label>
-                                        <input
-                                            type="text"
+                                        <select
                                             value={form.city}
-                                            onChange={(e) => setForm({ ...form, city: e.target.value })}
+                                            onChange={(e) => handleCityChange(e.target.value)}
                                             className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                            placeholder="Şehir"
-                                        />
+                                        >
+                                            <option value="">Şehir Seçin</option>
+                                            {cities.map(city => (
+                                                <option key={city} value={city}>{city}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-slate-400">İlçe</label>
-                                        <input
-                                            type="text"
+                                        <select
                                             value={form.district}
                                             onChange={(e) => setForm({ ...form, district: e.target.value })}
                                             className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 outline-none"
-                                            placeholder="İlçe"
-                                        />
+                                            disabled={!form.city || districts.length === 0}
+                                        >
+                                            <option value="">İlçe Seçin</option>
+                                            {districts.map(district => (
+                                                <option key={district} value={district}>{district}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
                                 <button

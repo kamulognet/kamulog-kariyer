@@ -33,6 +33,9 @@ export default function AdminJobsPage() {
     const [showExpiredOnly, setShowExpiredOnly] = useState(false)
     const [bulkDeleting, setBulkDeleting] = useState(false)
 
+    // Şehir listesi
+    const [cities, setLocationCities] = useState<string[]>([])
+
     // New job form state
     const [formData, setFormData] = useState({
         title: '',
@@ -49,7 +52,18 @@ export default function AdminJobsPage() {
 
     useEffect(() => {
         loadJobs()
+        loadLocationCities()
     }, [])
+
+    const loadLocationCities = async () => {
+        try {
+            const res = await fetch('/api/locations')
+            const data = await res.json()
+            setLocationCities(data.cities || [])
+        } catch (e) {
+            console.error('Şehirler yüklenemedi', e)
+        }
+    }
 
     const loadJobs = async () => {
         try {
@@ -494,13 +508,17 @@ export default function AdminJobsPage() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-1">Konum</label>
-                                        <input
-                                            type="text"
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Konum (Şehir)</label>
+                                        <select
                                             value={formData.location}
                                             onChange={e => setFormData({ ...formData, location: e.target.value })}
                                             className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                        />
+                                        >
+                                            <option value="">Şehir Seçin</option>
+                                            {cities.map(city => (
+                                                <option key={city} value={city}>{city}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-400 mb-1">Tür</label>
@@ -618,13 +636,17 @@ export default function AdminJobsPage() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-1">Konum</label>
-                                        <input
-                                            type="text"
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Konum (Şehir)</label>
+                                        <select
                                             value={editingJob.location || ''}
                                             onChange={e => setEditingJob({ ...editingJob, location: e.target.value })}
                                             className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                        />
+                                        >
+                                            <option value="">Şehir Seçin</option>
+                                            {cities.map(city => (
+                                                <option key={city} value={city}>{city}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-400 mb-1">Tür</label>
