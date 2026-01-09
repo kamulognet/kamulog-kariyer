@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { prisma } from '@/lib/prisma'
 
 export const metadata: Metadata = {
     title: 'Kullanım Koşulları | Kullanım Şartları - Kariyer Kamulog',
@@ -21,176 +22,158 @@ export const metadata: Metadata = {
     },
 }
 
-export default function KullanimKosullariPage() {
+// Markdown'u HTML'e çevir (basit)
+function parseMarkdown(md: string): string {
+    let result = md
+        .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-purple-400 mt-6 mb-3">$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold text-purple-400 mt-8 mb-4">$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-white mb-6">$1</h1>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^- (.*$)/gim, '<li class="text-slate-300">$1</li>')
+        .replace(/\n\n/g, '</p><p class="text-slate-300 leading-relaxed my-4">')
+        .replace(/\n/g, '<br/>')
+
+    // Wrap li elements in ul
+    result = result.replace(/(<li[^>]*>.*?<\/li>)+/g, '<ul class="list-disc list-inside space-y-2 my-4">$&</ul>')
+
+    return result
+}
+
+// Varsayılan içerik
+const DEFAULT_CONTENT = `
+# Kullanım Koşulları
+
+## 1. Giriş ve Kabul
+
+Bu Kullanım Koşulları, **Kariyer Kamulog** platformunu ("Platform", "Hizmet") kullanımınızı düzenlemektedir. Platformu kullanarak bu koşulları kabul etmiş sayılırsınız.
+
+**Platform Sahibi:** Suat Hayri Şahin – Kamulog.net
+**Vergi Kimlik No:** 7960109842
+**Adres:** Atatürk Mahallesi, Çelikel Sokak, Sancaktepe/İSTANBUL PK: 34785
+**E-Posta:** destek@kamulogkariyer.com
+
+## 2. Hizmet Tanımı
+
+Kariyer Kamulog, aşağıdaki hizmetleri sunmaktadır:
+
+- Yapay zeka destekli CV oluşturma ve düzenleme
+- Kamu ve özel sektör iş ilanları listeleme
+- CV-iş ilanı eşleştirme ve uyumluluk analizi
+- Kariyer danışmanlığı hizmetleri (Premium)
+- PDF CV indirme ve dışa aktarma
+
+## 3. Önemli Uyarı - İşe Yerleştirme
+
+**Kariyer Kamulog, herhangi bir işe yerleştirme garantisi sunmamaktadır.**
+
+- Platform, yalnızca bilgilendirme ve araç sağlama amacı taşımaktadır
+- CV analizi ve iş eşleştirme sonuçları yapay zeka desteklidir ve kesin değildir
+- İş başvuruları ve mülakat süreçleri tamamen kullanıcının sorumluluğundadır
+- Herhangi bir iş garantisi veya vaadi bulunmamaktadır
+
+## 4. Hesap Oluşturma ve Güvenlik
+
+- Hesap oluşturmak için 18 yaşından büyük olmalısınız
+- Doğru ve güncel bilgiler sağlamakla yükümlüsünüz
+- Hesap güvenliğinizden siz sorumlusunuz
+- Şifrenizi başkalarıyla paylaşmamalısınız
+- Şüpheli aktiviteleri derhal bildirmelisiniz
+
+## 5. Abonelik ve Ödemeler
+
+- Abonelik planları aylık olarak faturalandırılır
+- Fiyatlar TL cinsinden belirtilmiştir ve KDV dahildir
+- Ödemeler banka havalesi yoluyla alınmaktadır
+- Ödeme onayı ile hesabınıza jeton/kredi yüklenir
+- Kullanılmayan jetonlar/krediler sonraki aya devretmez
+
+## 6. İade Politikası
+
+Dijital hizmet yapısı gereği, kullanılmış jetonlar/krediler için iade yapılmamaktadır. Ancak aşağıdaki durumlarda iade değerlendirilebilir:
+
+- Teknik hata nedeniyle hizmet alınamaması
+- Mükerrer ödeme yapılması
+- Ödeme sonrası hesap aktif edilmemesi
+
+İade talepleri için **destek@kamulogkariyer.com** adresine başvurunuz.
+
+## 7. Kullanıcı Yükümlülükleri
+
+Platform kullanımında aşağıdaki kurallara uymakla yükümlüsünüz:
+
+- Doğru ve gerçek bilgiler sağlamak
+- Başkalarının bilgilerini izinsiz kullanmamak
+- Platformu yasa dışı amaçlarla kullanmamak
+- Spam veya zararlı içerik paylaşmamak
+- Teknik altyapıya zarar vermemek
+- Otomatik veri toplama araçları kullanmamak
+
+## 8. Fikri Mülkiyet
+
+- Platform tasarımı, kodu ve içeriği Platform'a aittir
+- CV içerikleriniz size aittir
+- Platform logosunu ve markasını izinsiz kullanamazsınız
+- İçerikleri ticari amaçla kopyalayamazsınız
+
+## 9. Sorumluluk Sınırlaması
+
+Platform, yasaların izin verdiği en geniş ölçüde:
+
+- Hizmet kesintilerinden dolayı sorumluluk kabul etmez
+- Yapay zeka çıktılarının doğruluğunu garanti etmez
+- Kullanıcının iş başvuru sonuçlarından sorumlu değildir
+- Üçüncü taraf sitelerine bağlantılardan sorumlu değildir
+- Dolaylı, özel veya cezai zararlardan sorumlu tutulamaz
+
+## 10. Hesap Askıya Alma ve Fesih
+
+Aşağıdaki durumlarda hesabınız askıya alınabilir veya feshedilebilir:
+
+- Kullanım koşullarının ihlali
+- Yasa dışı faaliyetler
+- Diğer kullanıcılara zarar verici davranışlar
+- Sahte veya yanıltıcı bilgi sağlama
+
+## 11. Değişiklikler
+
+Bu Kullanım Koşulları'nı önceden bildirim yapmaksızın değiştirme hakkını saklı tutuyoruz. Önemli değişiklikler e-posta yoluyla bildirilecektir. Değişiklikler sonrası platformu kullanmaya devam etmeniz, yeni koşulları kabul ettiğiniz anlamına gelir.
+
+## 12. Uygulanacak Hukuk ve Uyuşmazlıklar
+
+Bu Kullanım Koşulları, Türkiye Cumhuriyeti kanunlarına tabidir. Uyuşmazlıklarda İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.
+
+## 13. İletişim
+
+Kullanım koşulları hakkında sorularınız için:
+
+**E-Posta:** destek@kamulogkariyer.com
+**Adres:** Atatürk Mahallesi, Çelikel Sokak, Sancaktepe/İSTANBUL PK: 34785
+
+*Son güncelleme: Ocak 2025*
+`
+
+async function getContent(): Promise<string> {
+    try {
+        const content = await prisma.siteSettings.findUnique({
+            where: { key: 'legal_kullanim-kosullari' }
+        })
+        return content?.value || DEFAULT_CONTENT
+    } catch {
+        return DEFAULT_CONTENT
+    }
+}
+
+export default async function KullanimKosullariPage() {
+    const content = await getContent()
+    const htmlContent = parseMarkdown(content)
+
     return (
         <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-8 md:p-12">
-            <h1 className="text-3xl font-bold text-white mb-8">Kullanım Koşulları</h1>
-
-            <div className="prose prose-invert prose-slate max-w-none space-y-6">
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">1. Giriş ve Kabul</h2>
-                    <p className="text-slate-300 leading-relaxed">
-                        Bu Kullanım Koşulları, <strong className="text-white">Kariyer Kamulog</strong> platformunu
-                        ("Platform", "Hizmet") kullanımınızı düzenlemektedir. Platformu kullanarak bu koşulları
-                        kabul etmiş sayılırsınız.
-                    </p>
-                    <div className="bg-slate-700/50 rounded-lg p-4 mt-4 text-sm">
-                        <p><strong className="text-white">Platform Sahibi:</strong> Suat Hayri Şahin – Kamulog.net</p>
-                        <p><strong className="text-white">Vergi Kimlik No:</strong> 7960109842</p>
-                        <p><strong className="text-white">Adres:</strong> Atatürk Mahallesi, Çelikel Sokak, Sancaktepe/İSTANBUL PK: 34785</p>
-                        <p><strong className="text-white">E-Posta:</strong> destek@kamulogkariyer.com</p>
-                    </div>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">2. Hizmet Tanımı</h2>
-                    <p className="text-slate-300 leading-relaxed">
-                        Kariyer Kamulog, aşağıdaki hizmetleri sunmaktadır:
-                    </p>
-                    <ul className="list-disc list-inside text-slate-300 space-y-2 mt-3">
-                        <li>Yapay zeka destekli CV oluşturma ve düzenleme</li>
-                        <li>Kamu ve özel sektör iş ilanları listeleme</li>
-                        <li>CV-iş ilanı eşleştirme ve uyumluluk analizi</li>
-                        <li>Kariyer danışmanlığı hizmetleri (Premium)</li>
-                        <li>PDF CV indirme ve dışa aktarma</li>
-                    </ul>
-                </section>
-
-                <section className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5">
-                    <h2 className="text-xl font-semibold text-amber-400 mb-4">⚠️ 3. Önemli Uyarı - İşe Yerleştirme</h2>
-                    <p className="text-slate-300 leading-relaxed">
-                        <strong className="text-white">Kariyer Kamulog, herhangi bir işe yerleştirme garantisi sunmamaktadır.</strong>
-                    </p>
-                    <ul className="list-disc list-inside text-slate-300 space-y-2 mt-3">
-                        <li>Platform, yalnızca bilgilendirme ve araç sağlama amacı taşımaktadır</li>
-                        <li>CV analizi ve iş eşleştirme sonuçları yapay zeka desteklidir ve kesin değildir</li>
-                        <li>İş başvuruları ve mülakat süreçleri tamamen kullanıcının sorumluluğundadır</li>
-                        <li>Herhangi bir iş garantisi veya vaadi bulunmamaktadır</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">4. Hesap Oluşturma ve Güvenlik</h2>
-                    <ul className="list-disc list-inside text-slate-300 space-y-2">
-                        <li>Hesap oluşturmak için 18 yaşından büyük olmalısınız</li>
-                        <li>Doğru ve güncel bilgiler sağlamakla yükümlüsünüz</li>
-                        <li>Hesap güvenliğinizden siz sorumlusunuz</li>
-                        <li>Şifrenizi başkalarıyla paylaşmamalısınız</li>
-                        <li>Şüpheli aktiviteleri derhal bildirmelisiniz</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">5. Abonelik ve Ödemeler</h2>
-                    <ul className="list-disc list-inside text-slate-300 space-y-2">
-                        <li>Abonelik planları aylık olarak faturalandırılır</li>
-                        <li>Fiyatlar TL cinsinden belirtilmiştir ve KDV dahildir</li>
-                        <li>Ödemeler banka havalesi yoluyla alınmaktadır</li>
-                        <li>Ödeme onayı ile hesabınıza jeton/kredi yüklenir</li>
-                        <li>Kullanılmayan jetonlar/krediler sonraki aya devretmez</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">6. İade Politikası</h2>
-                    <p className="text-slate-300 leading-relaxed">
-                        Dijital hizmet yapısı gereği, kullanılmış jetonlar/krediler için iade yapılmamaktadır.
-                        Ancak aşağıdaki durumlarda iade değerlendirilebilir:
-                    </p>
-                    <ul className="list-disc list-inside text-slate-300 space-y-2 mt-3">
-                        <li>Teknik hata nedeniyle hizmet alınamaması</li>
-                        <li>Mükerrer ödeme yapılması</li>
-                        <li>Ödeme sonrası hesap aktif edilmemesi</li>
-                    </ul>
-                    <p className="text-slate-300 leading-relaxed mt-3">
-                        İade talepleri için <strong className="text-white">destek@kamulogkariyer.com</strong> adresine başvurunuz.
-                    </p>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">7. Kullanıcı Yükümlülükleri</h2>
-                    <p className="text-slate-300 leading-relaxed">
-                        Platform kullanımında aşağıdaki kurallara uymakla yükümlüsünüz:
-                    </p>
-                    <ul className="list-disc list-inside text-slate-300 space-y-2 mt-3">
-                        <li>Doğru ve gerçek bilgiler sağlamak</li>
-                        <li>Başkalarının bilgilerini izinsiz kullanmamak</li>
-                        <li>Platformu yasa dışı amaçlarla kullanmamak</li>
-                        <li>Spam veya zararlı içerik paylaşmamak</li>
-                        <li>Teknik altyapıya zarar vermemek</li>
-                        <li>Otomatik veri toplama araçları kullanmamak</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">8. Fikri Mülkiyet</h2>
-                    <ul className="list-disc list-inside text-slate-300 space-y-2">
-                        <li>Platform tasarımı, kodu ve içeriği Platform'a aittir</li>
-                        <li>CV içerikleriniz size aittir</li>
-                        <li>Platform logosunu ve markasını izinsiz kullanamazsınız</li>
-                        <li>İçerikleri ticari amaçla kopyalayamazsınız</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">9. Sorumluluk Sınırlaması</h2>
-                    <p className="text-slate-300 leading-relaxed">
-                        Platform, yasaların izin verdiği en geniş ölçüde:
-                    </p>
-                    <ul className="list-disc list-inside text-slate-300 space-y-2 mt-3">
-                        <li>Hizmet kesintilerinden dolayı sorumluluk kabul etmez</li>
-                        <li>Yapay zeka çıktılarının doğruluğunu garanti etmez</li>
-                        <li>Kullanıcının iş başvuru sonuçlarından sorumlu değildir</li>
-                        <li>Üçüncü taraf sitelerine bağlantılardan sorumlu değildir</li>
-                        <li>Dolaylı, özel veya cezai zararlardan sorumlu tutulamaz</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">10. Hesap Askıya Alma ve Fesih</h2>
-                    <p className="text-slate-300 leading-relaxed">
-                        Aşağıdaki durumlarda hesabınız askıya alınabilir veya feshedilebilir:
-                    </p>
-                    <ul className="list-disc list-inside text-slate-300 space-y-2 mt-3">
-                        <li>Kullanım koşullarının ihlali</li>
-                        <li>Yasa dışı faaliyetler</li>
-                        <li>Diğer kullanıcılara zarar verici davranışlar</li>
-                        <li>Sahte veya yanıltıcı bilgi sağlama</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">11. Değişiklikler</h2>
-                    <p className="text-slate-300 leading-relaxed">
-                        Bu Kullanım Koşulları'nı önceden bildirim yapmaksızın değiştirme hakkını saklı tutuyoruz.
-                        Önemli değişiklikler e-posta yoluyla bildirilecektir. Değişiklikler sonrası platformu
-                        kullanmaya devam etmeniz, yeni koşulları kabul ettiğiniz anlamına gelir.
-                    </p>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">12. Uygulanacak Hukuk ve Uyuşmazlıklar</h2>
-                    <p className="text-slate-300 leading-relaxed">
-                        Bu Kullanım Koşulları, Türkiye Cumhuriyeti kanunlarına tabidir. Uyuşmazlıklarda
-                        İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.
-                    </p>
-                </section>
-
-                <section>
-                    <h2 className="text-xl font-semibold text-purple-400 mb-4">13. İletişim</h2>
-                    <p className="text-slate-300 leading-relaxed">
-                        Kullanım koşulları hakkında sorularınız için:
-                    </p>
-                    <div className="bg-slate-700/50 rounded-lg p-4 mt-3 text-sm">
-                        <p><strong className="text-white">E-Posta:</strong> destek@kamulogkariyer.com</p>
-                        <p><strong className="text-white">Adres:</strong> Atatürk Mahallesi, Çelikel Sokak, Sancaktepe/İSTANBUL PK: 34785</p>
-                    </div>
-                </section>
-
-                <div className="mt-8 pt-6 border-t border-slate-700 text-sm text-slate-500">
-                    <p>Son güncelleme: Ocak 2025</p>
-                </div>
-            </div>
+            <div
+                className="prose prose-invert prose-slate max-w-none"
+                dangerouslySetInnerHTML={{ __html: `<p class="text-slate-300 leading-relaxed">${htmlContent}</p>` }}
+            />
         </div>
     )
 }
