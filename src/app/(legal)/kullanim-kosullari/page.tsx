@@ -1,8 +1,24 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-    title: 'Kullanım Koşulları',
-    description: 'Kariyer Kamulog Kullanım Koşulları - Platform kullanım şartları ve sorumluluklar'
+    title: 'Kullanım Koşulları | Kullanım Şartları - Kariyer Kamulog',
+    description: 'Kariyer Kamulog Kullanım Koşulları ve Kullanım Şartları - Platform kullanım kuralları, abonelik, ödeme ve sorumluluklar hakkında detaylı bilgi.',
+    keywords: [
+        'kullanım koşulları',
+        'kullanım şartları',
+        'kariyer kamulog şartlar',
+        'platform kuralları',
+        'abonelik koşulları',
+        'hizmet şartları'
+    ],
+    openGraph: {
+        title: 'Kullanım Koşulları | Kariyer Kamulog',
+        description: 'Kariyer Kamulog Kullanım Koşulları - Platform kullanım şartları ve sorumluluklar.',
+        url: 'https://kariyerkamulog.com/kullanim-kosullari',
+    },
+    alternates: {
+        canonical: 'https://kariyerkamulog.com/kullanim-kosullari',
+    },
 }
 
 export default function KullanimKosullariPage() {

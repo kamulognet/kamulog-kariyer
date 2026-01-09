@@ -1,8 +1,30 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-    title: 'Gizlilik Politikası',
-    description: 'Kariyer Kamulog Gizlilik Politikası - Kişisel verilerin korunması ve güvenliği hakkında bilgilendirme'
+    title: 'Gizlilik Politikası | Gizlilik Sözleşmesi - Kariyer Kamulog',
+    description: 'Kariyer Kamulog Gizlilik Politikası ve Gizlilik Sözleşmesi - Kişisel verilerin korunması, veri güvenliği, KVKK uyumu ve gizlilik hakları hakkında detaylı bilgilendirme. Kamulog gizlilik.',
+    keywords: [
+        'gizlilik politikası',
+        'gizlilik sözleşmesi',
+        'kariyer kamulog gizlilik',
+        'kamulog gizlilik',
+        'kamulog kariyer gizlilik',
+        'kişisel veri koruma',
+        'veri güvenliği',
+        'gizlilik hakları',
+        'gizlilik metni',
+        'privacy policy',
+        'veri koruma politikası',
+        'kişisel verilerin korunması'
+    ],
+    openGraph: {
+        title: 'Gizlilik Politikası | Kariyer Kamulog',
+        description: 'Kariyer Kamulog Gizlilik Politikası - Kişisel verilerinizin korunması hakkında bilgi edinin.',
+        url: 'https://kariyerkamulog.com/gizlilik',
+    },
+    alternates: {
+        canonical: 'https://kariyerkamulog.com/gizlilik',
+    },
 }
 
 export default function GizlilikPage() {

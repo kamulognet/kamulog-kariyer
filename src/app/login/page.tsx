@@ -53,20 +53,23 @@ export default function LoginPage() {
         setLoading(true)
 
         try {
-            // Bypass verification - direct login
-            const result = await signIn('credentials', {
-                email,
-                password,
-                redirect: false,
+            // Önce email/şifre doğrula ve kod gönder
+            const res = await fetch('/api/auth/send-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
             })
 
-            if (result?.error) {
-                setError('Email veya şifre hatalı')
+            const data = await res.json()
+
+            if (!res.ok) {
+                setError(data.error || 'Giriş bilgileri hatalı')
                 return
             }
 
-            router.push('/panel')
-            router.refresh()
+            // Kod gönderildi, doğrulama adımına geç
+            setStep('verification')
+            setResendTimer(60)
         } catch (err) {
             setError('Bir hata oluştu')
         } finally {

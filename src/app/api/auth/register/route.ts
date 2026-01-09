@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { formatPhoneNumber } from '@/utils/helpers'
+import { sendRegistrationVerificationEmail } from '@/lib/email'
 import { z } from 'zod'
 
 const registerSchema = z.object({
@@ -10,6 +11,11 @@ const registerSchema = z.object({
     password: z.string().min(6, 'Şifre en az 6 karakter olmalıdır'),
     phoneNumber: z.string().regex(/^[0-9]{10}$/, 'Telefon numarası 10 haneli olmalıdır (Başında 0 olmadan)'),
 })
+
+// 6 haneli rastgele doğrulama kodu oluştur
+function generateVerificationCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString()
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -40,30 +46,39 @@ export async function POST(req: NextRequest) {
                 )
             }
 
-            // If user exists but email not verified, update and auto-verify
+            // If user exists but email not verified, update and send new code
+            const verificationCode = generateVerificationCode()
+            const verificationExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 dakika
+
             await prisma.user.update({
                 where: { id: existingUser.id },
                 data: {
                     password: await bcrypt.hash(password, 12),
                     name,
                     phoneNumber: formatPhoneNumber(phoneNumber),
-                    emailVerified: new Date(), // Auto verify
-                    verificationCode: null,
-                    verificationExpires: null,
+                    verificationCode,
+                    verificationExpires,
                 }
             })
 
+            // Send verification email
+            await sendRegistrationVerificationEmail(email, verificationCode, name)
+
             return NextResponse.json({
                 success: true,
-                requiresVerification: false,
-                message: 'Kayıt başarılı! Giriş yapabilirsiniz.'
+                requiresVerification: true,
+                message: 'Doğrulama kodu e-posta adresinize gönderildi.'
             })
         }
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12)
 
-        // Create user (email auto-verified, no verification needed)
+        // Generate verification code
+        const verificationCode = generateVerificationCode()
+        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 dakika
+
+        // Create user (email NOT verified, requires verification)
         await prisma.user.create({
             data: {
                 name,
@@ -71,7 +86,9 @@ export async function POST(req: NextRequest) {
                 phoneNumber: formatPhoneNumber(phoneNumber),
                 password: hashedPassword,
                 role: 'USER',
-                emailVerified: new Date(), // Auto verify - bypass email verification
+                emailVerified: null, // Email doğrulanmamış
+                verificationCode,
+                verificationExpires,
                 subscription: {
                     create: {
                         plan: 'FREE',
@@ -81,10 +98,13 @@ export async function POST(req: NextRequest) {
             },
         })
 
+        // Send verification email
+        await sendRegistrationVerificationEmail(email, verificationCode, name)
+
         return NextResponse.json({
             success: true,
-            requiresVerification: false,
-            message: 'Kayıt başarılı! Giriş yapabilirsiniz.'
+            requiresVerification: true,
+            message: 'Doğrulama kodu e-posta adresinize gönderildi.'
         })
     } catch (error: any) {
         console.error('Register error:', error)

@@ -1,8 +1,24 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-    title: 'KVKK Aydınlatma Metni',
-    description: 'Kariyer Kamulog KVKK Aydınlatma Metni - Kişisel verilerin işlenmesi hakkında bilgilendirme'
+    title: 'KVKK Aydınlatma Metni | Kişisel Veri Koruma - Kariyer Kamulog',
+    description: 'Kariyer Kamulog KVKK Aydınlatma Metni - 6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında kişisel verilerin işlenmesi hakkında detaylı bilgilendirme.',
+    keywords: [
+        'kvkk',
+        'kvkk aydınlatma metni',
+        'kişisel veri koruma',
+        'kariyer kamulog kvkk',
+        '6698 sayılı kanun',
+        'veri işleme'
+    ],
+    openGraph: {
+        title: 'KVKK Aydınlatma Metni | Kariyer Kamulog',
+        description: 'Kariyer Kamulog KVKK Aydınlatma Metni - Kişisel verilerin işlenmesi hakkında bilgi.',
+        url: 'https://kariyerkamulog.com/kvkk',
+    },
+    alternates: {
+        canonical: 'https://kariyerkamulog.com/kvkk',
+    },
 }
 
 export default function KVKKPage() {

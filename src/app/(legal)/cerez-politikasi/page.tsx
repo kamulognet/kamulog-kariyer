@@ -1,8 +1,24 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-    title: 'Çerez Politikası',
-    description: 'Kariyer Kamulog Çerez Politikası - Çerezlerin kullanımı hakkında bilgilendirme'
+    title: 'Çerez Politikası | Cookie Policy - Kariyer Kamulog',
+    description: 'Kariyer Kamulog Çerez Politikası - Çerezlerin kullanımı, çerez türleri ve çerez tercihleri hakkında detaylı bilgilendirme.',
+    keywords: [
+        'çerez politikası',
+        'cookie policy',
+        'kariyer kamulog çerez',
+        'çerez ayarları',
+        'çerez kullanımı',
+        'tarayıcı çerezleri'
+    ],
+    openGraph: {
+        title: 'Çerez Politikası | Kariyer Kamulog',
+        description: 'Kariyer Kamulog Çerez Politikası - Çerezlerin kullanımı hakkında bilgi.',
+        url: 'https://kariyerkamulog.com/cerez-politikasi',
+    },
+    alternates: {
+        canonical: 'https://kariyerkamulog.com/cerez-politikasi',
+    },
 }
 
 export default function CerezPage() {

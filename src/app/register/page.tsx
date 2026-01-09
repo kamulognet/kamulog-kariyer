@@ -69,7 +69,14 @@ export default function RegisterPage() {
                 return
             }
 
-            // Bypass verification - auto login
+            // Email doğrulama gerekiyorsa doğrulama adımına geç
+            if (data.requiresVerification) {
+                setStep('verification')
+                setResendTimer(60)
+                return
+            }
+
+            // Doğrulama gerekmiyorsa (geriye dönük uyumluluk için) otomatik giriş yap
             const result = await signIn('credentials', {
                 email,
                 password,
@@ -77,7 +84,6 @@ export default function RegisterPage() {
             })
 
             if (result?.error) {
-                // Kayıt tamamlandı ama giriş başarısız, login'e yönlendir
                 router.push('/login?registered=true')
             } else {
                 router.push('/panel')
