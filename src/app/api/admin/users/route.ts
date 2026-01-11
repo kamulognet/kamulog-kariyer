@@ -45,6 +45,16 @@ async function getPlanTokens(planId: string): Promise<{ tokens: number; cvChatTo
 }
 
 // Admin middleware
+// ADMIN ve MODERATOR erişimi (MODERATOR sadece okuma yapabilir)
+async function checkAdminOrModerator() {
+    const session = await getServerSession(authOptions)
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR')) {
+        return null
+    }
+    return session
+}
+
+// Sadece ADMIN erişimi (düzenleme için)
 async function checkAdmin() {
     const session = await getServerSession(authOptions)
     if (!session?.user || session.user.role !== 'ADMIN') {
@@ -53,9 +63,9 @@ async function checkAdmin() {
     return session
 }
 
-// Kullanıcı listesi
+// Kullanıcı listesi - MODERATOR da görüntüleyebilir
 export async function GET(req: NextRequest) {
-    const session = await checkAdmin()
+    const session = await checkAdminOrModerator()
     if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

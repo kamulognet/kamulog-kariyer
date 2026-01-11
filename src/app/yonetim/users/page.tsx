@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import {
     Users,
     Search,
@@ -37,6 +38,8 @@ interface Pagination {
 }
 
 export default function AdminUsersPage() {
+    const { data: session } = useSession()
+    const isAdmin = session?.user?.role === 'ADMIN'
     const [users, setUsers] = useState<User[]>([])
     const [pagination, setPagination] = useState<Pagination | null>(null)
     const [loading, setLoading] = useState(true)
@@ -472,20 +475,26 @@ export default function AdminUsersPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => openEditModal(user)}
-                                                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
-                                                    title="Düzenle"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteUser(user.id, user.email)}
-                                                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
-                                                    title="Sil"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {isAdmin ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() => openEditModal(user)}
+                                                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition"
+                                                            title="Düzenle"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteUser(user.id, user.email)}
+                                                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
+                                                            title="Sil"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-xs text-slate-500 italic">Salt okunur</span>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

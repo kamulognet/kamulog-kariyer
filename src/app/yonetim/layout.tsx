@@ -26,7 +26,7 @@ import {
 
 const navItems = [
     { href: '/yonetim', label: 'Anasayfa', icon: LayoutDashboard, adminOnly: false },
-    { href: '/yonetim/users', label: 'Kullanıcılar', icon: Users, adminOnly: true },
+    { href: '/yonetim/users', label: 'Kullanıcılar', icon: Users, adminOnly: false }, // MODERATOR görür ama düzenleyemez
     { href: '/yonetim/subscriptions', label: 'Abonelikler', icon: CreditCard, adminOnly: false },
     { href: '/yonetim/plans', label: 'Planlar & Jetonlar', icon: Coins, adminOnly: false },
     { href: '/yonetim/jobs', label: 'İş İlanları', icon: Briefcase, adminOnly: false },

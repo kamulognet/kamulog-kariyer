@@ -328,9 +328,13 @@ export default function AdminPlansPage() {
                                                     type="checkbox"
                                                     checked={plan.isUnlimited || false}
                                                     onChange={(e) => updatePlan(planIndex, 'isUnlimited', e.target.checked)}
-                                                    className="w-5 h-5 accent-green-500"
+                                                    disabled={session?.user?.role === 'MODERATOR'}
+                                                    className="w-5 h-5 accent-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 />
-                                                <label className="text-green-400 font-medium">♾️ SINIRSIZ PLAN (Tüm özellikler sınırsız)</label>
+                                                <label className={`font-medium ${session?.user?.role === 'MODERATOR' ? 'text-slate-500' : 'text-green-400'}`}>
+                                                    ♾️ SINIRSIZ PLAN (Tüm özellikler sınırsız)
+                                                    {session?.user?.role === 'MODERATOR' && <span className="text-xs text-red-400 ml-2">(Sadece ADMIN değiştirebilir)</span>}
+                                                </label>
                                             </div>
                                         </div>
 
