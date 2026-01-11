@@ -98,7 +98,12 @@ export default function Footer() {
                             </li>
                             <li>
                                 <Link href="/panel/danismanlik" className="text-slate-400 hover:text-purple-400 text-sm transition">
-                                    Kariyer Danışmanlığı
+                                    Kariyer Danışmanı
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/hakkimizda" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                    Hakkımızda
                                 </Link>
                             </li>
                         </ul>
@@ -177,24 +182,10 @@ export default function Footer() {
 
                 {/* Bottom Bar */}
                 <div className="mt-12 pt-8 border-t border-slate-800">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="flex flex-col md:flex-row justify-center items-center gap-4">
                         <p className="text-slate-500 text-sm">
                             © {new Date().getFullYear()} Kariyer Kamulog. Tüm hakları saklıdır.
                         </p>
-                        <div className="flex items-center gap-4 flex-wrap justify-center">
-                            <Link href="/hakkimizda" className="text-slate-500 hover:text-slate-300 text-sm transition">
-                                Hakkımızda
-                            </Link>
-                            <Link href="/iletisim" className="text-slate-500 hover:text-slate-300 text-sm transition">
-                                İletişim
-                            </Link>
-                            <Link href="/gizlilik" className="text-slate-500 hover:text-slate-300 text-sm transition">
-                                Gizlilik Politikası
-                            </Link>
-                            <Link href="/kullanim-sartlari" className="text-slate-500 hover:text-slate-300 text-sm transition">
-                                Kullanım Şartları
-                            </Link>
-                        </div>
                     </div>
                 </div>
             </div>

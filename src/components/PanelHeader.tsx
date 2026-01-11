@@ -107,7 +107,7 @@ export default function PanelHeader() {
                                 </Link>
                                 <Link href="/panel/danismanlik" className="text-purple-400 hover:text-purple-300 transition text-sm font-medium flex items-center gap-1.5 bg-purple-500/10 px-2 py-1 rounded-lg border border-purple-500/30">
                                     <Phone className="w-4 h-4" />
-                                    Danışmanlık
+                                    Kariyer Danışmanı
                                 </Link>
                             </nav>
                         </div>
