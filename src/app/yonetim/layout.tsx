@@ -25,21 +25,21 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-    { href: '/yonetim', label: 'Anasayfa', icon: LayoutDashboard },
-    { href: '/yonetim/users', label: 'Kullanıcılar', icon: Users },
-    { href: '/yonetim/subscriptions', label: 'Abonelikler', icon: CreditCard },
-    { href: '/yonetim/plans', label: 'Planlar & Jetonlar', icon: Coins },
-    { href: '/yonetim/jobs', label: 'İş İlanları', icon: Briefcase },
-    { href: '/yonetim/danismanlar', label: 'Kariyer Danışmanlığı', icon: Users },
-    { href: '/yonetim/danismanlar/mesajlar', label: '↳ Danışman Mesajları', icon: MessageCircle },
-    { href: '/yonetim/sales', label: 'Satış Kayıtları', icon: ShoppingCart },
-    { href: '/yonetim/campaigns', label: 'Kampanyalar', icon: Tag },
-    { href: '/yonetim/payment-settings', label: 'Ödeme Ayarları', icon: Wallet },
-    { href: '/yonetim/whatsapp', label: 'WhatsApp Butonu', icon: MessageCircle },
-    { href: '/yonetim/whatsapp-bot', label: 'WhatsApp Bot', icon: Smartphone },
-    { href: '/yonetim/medya', label: 'Medya', icon: Image },
-    { href: '/yonetim/yasal-sayfalar', label: 'Yasal Sayfalar', icon: FileText },
-    { href: '/yonetim/logs', label: 'Sistem Logları', icon: FileText },
+    { href: '/yonetim', label: 'Anasayfa', icon: LayoutDashboard, adminOnly: false },
+    { href: '/yonetim/users', label: 'Kullanıcılar', icon: Users, adminOnly: true },
+    { href: '/yonetim/subscriptions', label: 'Abonelikler', icon: CreditCard, adminOnly: false },
+    { href: '/yonetim/plans', label: 'Planlar & Jetonlar', icon: Coins, adminOnly: false },
+    { href: '/yonetim/jobs', label: 'İş İlanları', icon: Briefcase, adminOnly: false },
+    { href: '/yonetim/danismanlar', label: 'Kariyer Danışmanlığı', icon: Users, adminOnly: false },
+    { href: '/yonetim/danismanlar/mesajlar', label: '↳ Danışman Mesajları', icon: MessageCircle, adminOnly: false },
+    { href: '/yonetim/sales', label: 'Satış Kayıtları', icon: ShoppingCart, adminOnly: true },
+    { href: '/yonetim/campaigns', label: 'Kampanyalar', icon: Tag, adminOnly: false },
+    { href: '/yonetim/payment-settings', label: 'Ödeme Ayarları', icon: Wallet, adminOnly: true },
+    { href: '/yonetim/whatsapp', label: 'WhatsApp Butonu', icon: MessageCircle, adminOnly: true },
+    { href: '/yonetim/whatsapp-bot', label: 'WhatsApp Bot', icon: Smartphone, adminOnly: true },
+    { href: '/yonetim/medya', label: 'Medya', icon: Image, adminOnly: false },
+    { href: '/yonetim/yasal-sayfalar', label: 'Yasal Sayfalar', icon: FileText, adminOnly: false },
+    { href: '/yonetim/logs', label: 'Sistem Logları', icon: FileText, adminOnly: true },
 ]
 
 
@@ -52,7 +52,7 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login')
-        } else if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
+        } else if (status === 'authenticated' && session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MODERATOR') {
             router.push('/panel')
         }
     }, [status, session, router])
@@ -70,9 +70,18 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
         )
     }
 
-    if (session?.user?.role !== 'ADMIN') {
+    const isAdmin = session?.user?.role === 'ADMIN'
+    const isModerator = session?.user?.role === 'MODERATOR'
+
+    if (!isAdmin && !isModerator) {
         return null
     }
+
+    // Filter nav items based on role
+    const filteredNavItems = navItems.filter(item => {
+        if (isAdmin) return true // ADMIN sees everything
+        return !item.adminOnly // MODERATOR sees only non-admin items
+    })
 
     return (
         <div className="min-h-screen bg-[#0a0a1a]">
@@ -115,7 +124,7 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
 
                 {/* Navigation */}
                 <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-180px)]">
-                    {navItems.map((item) => {
+                    {filteredNavItems.map((item) => {
                         const isActive = pathname === item.href ||
                             (item.href !== '/yonetim' && pathname.startsWith(item.href))
                         const Icon = item.icon
@@ -138,16 +147,18 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
 
                 {/* Bottom Actions */}
                 <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/5 bg-slate-900/95 backdrop-blur-xl space-y-1">
-                    <Link
-                        href="/yonetim/settings"
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-sm ${pathname === '/yonetim/settings'
-                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                            : 'text-gray-400 hover:text-white hover:bg-white/5'
-                            }`}
-                    >
-                        <Settings className="w-4 h-4" />
-                        <span className="font-medium">Ayarlar</span>
-                    </Link>
+                    {isAdmin && (
+                        <Link
+                            href="/yonetim/settings"
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-sm ${pathname === '/yonetim/settings'
+                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
+                        >
+                            <Settings className="w-4 h-4" />
+                            <span className="font-medium">Ayarlar</span>
+                        </Link>
+                    )}
                     <Link
                         href="/panel"
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition text-sm"
@@ -183,8 +194,11 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-400 text-xs font-medium rounded-lg border border-purple-500/30">
-                            ADMİN
+                        <span className={`px-2 py-1 text-xs font-medium rounded-lg border ${isAdmin
+                                ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-400 border-purple-500/30'
+                                : 'bg-gradient-to-r from-green-500/20 to-teal-500/20 text-green-400 border-green-500/30'
+                            }`}>
+                            {isAdmin ? 'ADMİN' : 'MODERATÖR'}
                         </span>
                     </div>
                 </header>

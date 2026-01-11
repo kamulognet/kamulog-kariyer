@@ -578,6 +578,7 @@ export default function AdminUsersPage() {
                                         className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
                                     >
                                         <option value="USER">USER</option>
+                                        <option value="MODERATOR">MODERATOR</option>
                                         <option value="ADMIN">ADMIN</option>
                                     </select>
                                 </div>
