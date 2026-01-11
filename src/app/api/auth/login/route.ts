@@ -8,6 +8,7 @@ import { verifyReptika } from '@/lib/reptika';
 /**
  * POST /api/auth/login
  * Handles login with Reptika bot detection and WhatsApp verification.
+ * Always sends a verification code for every login attempt.
  */
 export async function POST(req: NextRequest) {
     try {
@@ -25,39 +26,34 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Şifre hatalı' }, { status: 400 });
         }
 
-        // Bot detection using phone number (if available)
-        if (user.phoneNumber) {
-            const isHuman = await verifyReptika(formatPhoneNumber(user.phoneNumber));
-            if (!isHuman) {
-                return NextResponse.json({ error: 'Bot tespit edildi. Giriş yapılamıyor.' }, { status: 400 });
-            }
+        // Check if user has phone number
+        if (!user.phoneNumber) {
+            return NextResponse.json({ error: 'Telefon numarası eksik. Lütfen profil ayarlarından ekleyin.' }, { status: 400 });
         }
 
-        // If user is not verified, start WhatsApp verification flow
-        if (!user.emailVerified && user.phoneNumber) {
-            const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-            const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-
-            await prisma.user.update({
-                where: { id: user.id },
-                data: { verificationCode, verificationExpires },
-            });
-
-            const msg = `Kamulog Kariyer giriş doğrulama kodunuz: ${verificationCode}`;
-            await sendWhatsAppMessage(formatPhoneNumber(user.phoneNumber), msg);
-
-            return NextResponse.json({
-                success: true,
-                requiresVerification: true,
-                message: 'Doğrulama kodu WhatsApp üzerinden gönderildi.',
-            });
+        // Bot detection using phone number
+        const formattedPhone = formatPhoneNumber(user.phoneNumber);
+        const isHuman = await verifyReptika(formattedPhone);
+        if (!isHuman) {
+            return NextResponse.json({ error: 'Bot tespit edildi. Giriş yapılamıyor.' }, { status: 400 });
         }
 
-        // Already verified or no phone – successful login
+        // Always send WhatsApp verification code for every login
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { verificationCode, verificationExpires },
+        });
+
+        const msg = `Kamulog Kariyer giriş doğrulama kodunuz: ${verificationCode}`;
+        await sendWhatsAppMessage(formattedPhone, msg);
+
         return NextResponse.json({
             success: true,
-            requiresVerification: false,
-            message: 'Giriş başarılı',
+            requiresVerification: true,
+            message: 'Doğrulama kodu WhatsApp üzerinden gönderildi.',
         });
     } catch (error: any) {
         console.error('Login error:', error);
