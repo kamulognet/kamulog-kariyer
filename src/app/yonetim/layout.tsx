@@ -170,7 +170,7 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
             </aside>
 
             {/* Main Content */}
-            <div className="lg:ml-64 relative z-10">
+            <div className="lg:ml-64 relative z-10 min-h-screen flex flex-col">
                 {/* Header */}
                 <header className="h-16 bg-slate-900/50 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 lg:px-8">
                     {/* Mobile Menu Button */}
@@ -204,8 +204,10 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
                 </header>
 
                 {/* Page Content */}
-                <main className="p-4 lg:p-8">
-                    {children}
+                <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
+                    <div className="max-h-[calc(100vh-6rem)] overflow-y-auto">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>
