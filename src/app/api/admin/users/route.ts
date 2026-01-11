@@ -198,6 +198,29 @@ export async function PUT(req: NextRequest) {
             },
         })
 
+        // MODERATOR rolü atandıysa otomatik danışman kaydı oluştur
+        if (role === 'MODERATOR') {
+            // Kullanıcıya bağlı danışman var mı kontrol et
+            const existingConsultant = await prisma.consultant.findUnique({
+                where: { userId }
+            })
+
+            if (!existingConsultant) {
+                // Yeni danışman oluştur
+                await prisma.consultant.create({
+                    data: {
+                        name: user.name || user.email.split('@')[0],
+                        phone: user.phoneNumber || '-',
+                        title: 'Kariyer Danışmanı',
+                        description: 'Kariyer danışmanlığı hizmeti',
+                        isActive: true,
+                        userId: userId
+                    }
+                })
+                console.log(`[Users API] Auto-created consultant for MODERATOR user: ${userId}`)
+            }
+        }
+
         // Plan güncellemesi varsa subscription'ı da güncelle
         let tokensAdded = 0
         let cvChatTokensAdded = 0

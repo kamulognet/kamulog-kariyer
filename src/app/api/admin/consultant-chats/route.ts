@@ -15,10 +15,28 @@ export async function GET(request: NextRequest) {
         const consultantId = searchParams.get('consultantId')
         const roomId = searchParams.get('roomId')
 
+        // MODERATOR ise kendi danışman kaydını bul
+        let moderatorConsultantId: string | null = null
+        if (session.user.role === 'MODERATOR') {
+            const myConsultant = await prisma.consultant.findUnique({
+                where: { userId: session.user.id }
+            })
+            if (!myConsultant) {
+                return NextResponse.json({ error: 'Danışman kaydınız bulunamadı' }, { status: 403 })
+            }
+            moderatorConsultantId = myConsultant.id
+        }
+
         // Belirli bir odanın mesajları
         if (roomId) {
-            const room = await prisma.chatRoom.findUnique({
-                where: { id: roomId },
+            const whereClause: any = { id: roomId }
+            // MODERATOR ise sadece kendi odalarını görebilir
+            if (moderatorConsultantId) {
+                whereClause.consultantId = moderatorConsultantId
+            }
+
+            const room = await prisma.chatRoom.findFirst({
+                where: whereClause,
                 include: {
                     user: { select: { id: true, name: true, email: true, phoneNumber: true } },
                     consultant: { select: { id: true, name: true, title: true } },
@@ -36,8 +54,14 @@ export async function GET(request: NextRequest) {
         }
 
         // Danışman listesi ve istatistikleri
+        const consultantWhereClause: any = { isActive: true }
+        // MODERATOR ise sadece kendi kaydını görsün
+        if (moderatorConsultantId) {
+            consultantWhereClause.id = moderatorConsultantId
+        }
+
         const consultants = await prisma.consultant.findMany({
-            where: { isActive: true },
+            where: consultantWhereClause,
             include: {
                 chatRooms: {
                     include: {
@@ -57,6 +81,10 @@ export async function GET(request: NextRequest) {
 
         // Belirli danışmanın sohbetleri
         if (consultantId) {
+            // MODERATOR başka danışmanın sohbetlerine erişemez
+            if (moderatorConsultantId && consultantId !== moderatorConsultantId) {
+                return NextResponse.json({ error: 'Bu danışmanın sohbetlerine erişim yetkiniz yok' }, { status: 403 })
+            }
             const consultant = consultants.find((c: { id: string }) => c.id === consultantId)
             return NextResponse.json({ consultant })
         }
@@ -65,7 +93,11 @@ export async function GET(request: NextRequest) {
         const stats = {
             totalConsultants: consultants.length,
             totalRooms: consultants.reduce((sum: number, c: { _count: { chatRooms: number } }) => sum + c._count.chatRooms, 0),
-            totalMessages: await prisma.chatMessage.count()
+            totalMessages: moderatorConsultantId
+                ? await prisma.chatMessage.count({
+                    where: { room: { consultantId: moderatorConsultantId } }
+                })
+                : await prisma.chatMessage.count()
         }
 
         return NextResponse.json({ consultants, stats })
