@@ -30,7 +30,28 @@ export default function PanelHeader() {
         if (session) {
             checkUnlimited()
         }
+
+        // Çıkış yapmış kullanıcının geri butonuyla panel'e dönmesini engelle
+        if (typeof window !== 'undefined') {
+            window.history.replaceState(null, '', window.location.href)
+            const handlePopState = () => {
+                window.history.replaceState(null, '', window.location.href)
+            }
+            window.addEventListener('popstate', handlePopState)
+            return () => window.removeEventListener('popstate', handlePopState)
+        }
     }, [session])
+
+    // Çıkış fonksiyonu - session temizleme ve geri butonu engelleme
+    const handleLogout = () => {
+        // SessionStorage temizle - consent toast tekrar görünecek
+        if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('site_terms_accepted')
+            // Browser history'yi temizle
+            window.history.replaceState(null, '', '/login')
+        }
+        signOut({ callbackUrl: '/login' })
+    }
 
     if (!session) return null
 
@@ -142,7 +163,7 @@ export default function PanelHeader() {
 
                             {/* Logout - Hidden on small mobile */}
                             <button
-                                onClick={() => signOut({ callbackUrl: '/login' })}
+                                onClick={handleLogout}
                                 className="hidden sm:block p-1.5 text-slate-400 hover:text-red-400 transition"
                                 title="Çıkış Yap"
                             >
@@ -253,7 +274,7 @@ export default function PanelHeader() {
                 {/* Logout */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700">
                     <button
-                        onClick={() => signOut({ callbackUrl: '/login' })}
+                        onClick={handleLogout}
                         className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/20 transition"
                     >
                         <LogOut className="w-5 h-5" />
