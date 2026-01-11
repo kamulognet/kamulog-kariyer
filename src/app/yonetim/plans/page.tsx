@@ -37,7 +37,7 @@ export default function AdminPlansPage() {
     }, [status, session, router])
 
     useEffect(() => {
-        if (session?.user?.role === 'ADMIN') {
+        if (session?.user?.role === 'ADMIN' || session?.user?.role === 'MODERATOR') {
             loadPlans()
         }
     }, [session])
@@ -85,24 +85,31 @@ export default function AdminPlansPage() {
     }
 
     const updatePlan = (index: number, field: keyof Plan, value: any) => {
+        // MODERATOR PREMIUM planı düzenleyemez
+        if (session?.user?.role === 'MODERATOR' && plans[index]?.id === 'PREMIUM') {
+            return // silently ignore
+        }
         const updated = [...plans]
         updated[index] = { ...updated[index], [field]: value }
         setPlans(updated)
     }
 
     const updateFeature = (planIndex: number, featureIndex: number, value: string) => {
+        if (session?.user?.role === 'MODERATOR' && plans[planIndex]?.id === 'PREMIUM') return
         const updated = [...plans]
         updated[planIndex].features[featureIndex] = value
         setPlans(updated)
     }
 
     const addFeature = (planIndex: number) => {
+        if (session?.user?.role === 'MODERATOR' && plans[planIndex]?.id === 'PREMIUM') return
         const updated = [...plans]
         updated[planIndex].features.push('Yeni özellik')
         setPlans(updated)
     }
 
     const removeFeature = (planIndex: number, featureIndex: number) => {
+        if (session?.user?.role === 'MODERATOR' && plans[planIndex]?.id === 'PREMIUM') return
         const updated = [...plans]
         updated[planIndex].features.splice(featureIndex, 1)
         setPlans(updated)
@@ -124,6 +131,7 @@ export default function AdminPlansPage() {
     }
 
     const removePlan = (index: number) => {
+        if (session?.user?.role === 'MODERATOR' && plans[index]?.id === 'PREMIUM') return
         if (confirm('Bu planı silmek istediğinizden emin misiniz?')) {
             const updated = [...plans]
             updated.splice(index, 1)
