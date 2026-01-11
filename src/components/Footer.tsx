@@ -48,7 +48,7 @@ export default function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     {/* Logo & About */}
                     <div className="md:col-span-2">
-                        <Link href="/" className="flex items-center gap-3 mb-4">
+                        <Link href="/" target="_blank" rel="noopener" className="flex items-center gap-3 mb-4">
                             <Image
                                 src="/logo.png"
                                 alt="Kariyer Kamulog"
@@ -72,7 +72,7 @@ export default function Footer() {
                         <h4 className="text-white font-semibold mb-4">Site Haritası</h4>
                         <ul className="space-y-2">
                             <li>
-                                <Link href="/" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                <Link href="/" target="_blank" rel="noopener" className="text-slate-400 hover:text-purple-400 text-sm transition">
                                     Anasayfa
                                 </Link>
                             </li>
