@@ -1,6 +1,8 @@
 import { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
     title: 'İptal ve İade Politikası | Kariyer Kamulog',
     description: 'Kariyer Kamulog İptal ve İade Politikası - Dijital abonelik hizmetleri için iptal ve iade koşulları.',

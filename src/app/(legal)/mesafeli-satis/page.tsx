@@ -1,6 +1,8 @@
 import { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
     title: 'Mesafeli Satış Sözleşmesi | Kariyer Kamulog',
     description: 'Kariyer Kamulog Mesafeli Satış Sözleşmesi - 6502 sayılı Tüketicinin Korunması Hakkında Kanun kapsamında dijital abonelik hizmetleri satış sözleşmesi.',
