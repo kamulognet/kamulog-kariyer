@@ -259,11 +259,7 @@ export async function PUT(req: NextRequest) {
                 console.log(`[Users API] Upgraded subscription to PREMIUM for MODERATOR user: ${userId}`)
             }
 
-            // Kullanıcı planını da PREMIUM yap
-            await prisma.user.update({
-                where: { id: userId },
-                data: { plan: 'PREMIUM' }
-            })
+            // PREMIUM abonelik yeterli - kullanıcı planı subscription tablosundan okunuyor
         }
 
         // Plan güncellemesi varsa subscription'ı da güncelle
