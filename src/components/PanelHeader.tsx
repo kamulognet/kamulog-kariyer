@@ -130,7 +130,7 @@ export default function PanelHeader() {
                             </Link>
 
                             {/* Admin Badge */}
-                            {session.user.role === 'ADMIN' && (
+                            {(session.user.role === 'ADMIN' || session.user.role === 'MODERATOR') && (
                                 <Link
                                     href="/yonetim"
                                     className="p-1.5 text-purple-400 hover:bg-purple-500/10 rounded-lg transition"
@@ -237,7 +237,7 @@ export default function PanelHeader() {
                 </nav>
 
                 {/* Admin Link */}
-                {session.user.role === 'ADMIN' && (
+                {(session.user.role === 'ADMIN' || session.user.role === 'MODERATOR') && (
                     <div className="px-4 pb-2">
                         <Link
                             href="/yonetim"
