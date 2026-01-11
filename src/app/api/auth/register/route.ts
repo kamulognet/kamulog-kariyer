@@ -86,15 +86,28 @@ export async function POST(req: NextRequest) {
                 }
             })
 
-            // Send verification code via WhatsApp
+            // Try to send verification code via WhatsApp
             const whatsappMessage = `Kamulog Kariyer kayıt doğrulama kodunuz: ${verificationCode}`
-            await sendWhatsAppMessage(formatPhoneNumber(phoneNumber), whatsappMessage)
+            const messageSent = await sendWhatsAppMessage(formatPhoneNumber(phoneNumber), whatsappMessage)
 
-            return NextResponse.json({
-                success: true,
-                requiresVerification: true,
-                message: 'Doğrulama kodu WhatsApp üzerinden gönderildi.'
-            })
+            if (messageSent) {
+                return NextResponse.json({
+                    success: true,
+                    requiresVerification: true,
+                    message: 'Doğrulama kodu WhatsApp üzerinden gönderildi.'
+                })
+            } else {
+                // WhatsApp not available, auto-verify user
+                await prisma.user.update({
+                    where: { id: existingUser.id },
+                    data: { emailVerified: new Date() }
+                })
+                return NextResponse.json({
+                    success: true,
+                    requiresVerification: false,
+                    message: 'Kayıt başarılı (WhatsApp doğrulaması geçici olarak devre dışı)'
+                })
+            }
         }
 
         // Hash password
@@ -124,15 +137,28 @@ export async function POST(req: NextRequest) {
             },
         })
 
-        // Send verification code via WhatsApp
-        const whatsappMessage = `Kayıt doğrulama kodunuz: ${verificationCode}`
-        await sendWhatsAppMessage(formatPhoneNumber(phoneNumber), whatsappMessage)
+        // Try to send verification code via WhatsApp
+        const whatsappMessage = `Kamulog Kariyer kayıt doğrulama kodunuz: ${verificationCode}`
+        const messageSent = await sendWhatsAppMessage(formatPhoneNumber(phoneNumber), whatsappMessage)
 
-        return NextResponse.json({
-            success: true,
-            requiresVerification: true,
-            message: 'Doğrulama kodu WhatsApp üzerinden gönderildi.'
-        })
+        if (messageSent) {
+            return NextResponse.json({
+                success: true,
+                requiresVerification: true,
+                message: 'Doğrulama kodu WhatsApp üzerinden gönderildi.'
+            })
+        } else {
+            // WhatsApp not available, auto-verify user
+            await prisma.user.update({
+                where: { email },
+                data: { emailVerified: new Date() }
+            })
+            return NextResponse.json({
+                success: true,
+                requiresVerification: false,
+                message: 'Kayıt başarılı (WhatsApp doğrulaması geçici olarak devre dışı)'
+            })
+        }
     } catch (error: any) {
         console.error('Register error:', error)
 

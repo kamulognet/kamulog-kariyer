@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { formatPhoneNumber } from '@/utils/helpers';
-import { sendWhatsAppMessage } from '@/lib/whatsapp';
+import { sendWhatsAppMessage, isBotReady } from '@/lib/whatsapp';
 import { verifyReptika } from '@/lib/reptika';
 
 /**
  * POST /api/auth/login
  * Handles login with Reptika bot detection and WhatsApp verification.
- * Always sends a verification code for every login attempt.
+ * If WhatsApp bot is not connected, bypasses verification and allows login.
  */
 export async function POST(req: NextRequest) {
     try {
@@ -28,7 +28,13 @@ export async function POST(req: NextRequest) {
 
         // Check if user has phone number
         if (!user.phoneNumber) {
-            return NextResponse.json({ error: 'Telefon numarası eksik. Lütfen profil ayarlarından ekleyin.' }, { status: 400 });
+            // No phone number, allow direct login
+            console.log('[Login] User has no phone, allowing direct login');
+            return NextResponse.json({
+                success: true,
+                requiresVerification: false,
+                message: 'Giriş başarılı',
+            });
         }
 
         // Bot detection using phone number
@@ -38,7 +44,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Bot tespit edildi. Giriş yapılamıyor.' }, { status: 400 });
         }
 
-        // Always send WhatsApp verification code for every login
+        // Generate verification code
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
@@ -47,16 +53,29 @@ export async function POST(req: NextRequest) {
             data: { verificationCode, verificationExpires },
         });
 
+        // Try to send WhatsApp verification code
         const msg = `Kamulog Kariyer giriş doğrulama kodunuz: ${verificationCode}`;
-        await sendWhatsAppMessage(formattedPhone, msg);
+        const messageSent = await sendWhatsAppMessage(formattedPhone, msg);
 
-        return NextResponse.json({
-            success: true,
-            requiresVerification: true,
-            message: 'Doğrulama kodu WhatsApp üzerinden gönderildi.',
-        });
+        if (messageSent) {
+            // Message sent successfully, require verification
+            return NextResponse.json({
+                success: true,
+                requiresVerification: true,
+                message: 'Doğrulama kodu WhatsApp üzerinden gönderildi.',
+            });
+        } else {
+            // WhatsApp bot not available, bypass verification and allow direct login
+            console.log('[Login] WhatsApp bot not available, bypassing verification');
+            return NextResponse.json({
+                success: true,
+                requiresVerification: false,
+                message: 'Giriş başarılı (WhatsApp doğrulaması geçici olarak devre dışı)',
+            });
+        }
     } catch (error: any) {
         console.error('Login error:', error);
         return NextResponse.json({ error: 'Giriş sırasında bir hata oluştu' }, { status: 500 });
     }
 }
+
