@@ -43,7 +43,21 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        // Check existing user
+        // Check if phone number is already used by another verified user
+        const existingPhone = await prisma.user.findFirst({
+            where: {
+                phoneNumber: formatPhoneNumber(phoneNumber),
+                emailVerified: { not: null }
+            },
+        })
+        if (existingPhone) {
+            return NextResponse.json(
+                { error: 'Bu telefon numarası zaten başka bir hesapta kullanılıyor' },
+                { status: 400 }
+            )
+        }
+
+        // Check existing user by email
         const existingUser = await prisma.user.findUnique({
             where: { email },
         })
@@ -73,8 +87,8 @@ export async function POST(req: NextRequest) {
             })
 
             // Send verification code via WhatsApp
-            const whatsappMessage = `Kayıt doğrulama kodunuz: ${verificationCode}`
-            await sendWhatsAppMessage(existingUser.phoneNumber || formatPhoneNumber(phoneNumber), whatsappMessage)
+            const whatsappMessage = `Kamulog Kariyer kayıt doğrulama kodunuz: ${verificationCode}`
+            await sendWhatsAppMessage(formatPhoneNumber(phoneNumber), whatsappMessage)
 
             return NextResponse.json({
                 success: true,

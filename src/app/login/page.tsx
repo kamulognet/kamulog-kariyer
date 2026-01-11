@@ -261,9 +261,9 @@ export default function LoginPage() {
                                 </div>
                             )}
 
-                            <p className="text-blue-200 text-center">
-                                Giriş yapmak için e-posta adresinize gönderilen 6 haneli kodu girin.
-                            </p>
+                            <div className="bg-green-500/20 border border-green-500/50 text-green-200 px-4 py-3 rounded-lg text-sm text-center">
+                                WhatsApp numaranıza 6 haneli doğrulama kodu gönderildi.
+                            </div>
 
                             <div>
                                 <label htmlFor="verificationCode" className="block text-sm font-medium text-blue-200 mb-2">
