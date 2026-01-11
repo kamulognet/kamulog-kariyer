@@ -144,8 +144,8 @@ export default function JobsPage() {
                 return
             }
 
-            // Jeton düşümünü anlık göster (toast + header güncelleme)
-            if (data.creditsUsed && data.remainingCredits !== undefined) {
+            // Jeton düşümünü anlık göster (toast + header güncelleme) - sadece düşüm olduysa
+            if (data.creditsUsed && data.creditsUsed > 0 && data.remainingCredits !== undefined) {
                 showTokenDeduction(data.creditsUsed, data.remainingCredits)
             }
 

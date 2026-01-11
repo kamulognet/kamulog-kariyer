@@ -109,8 +109,8 @@ export default function JobAnalyzePage() {
                     score: data.analysis.score,
                     feedback: data.analysis.feedback
                 })
-                // Jeton düşümünü anlık göster
-                if (data.creditsUsed && data.remainingCredits !== undefined) {
+                // Jeton düşümünü anlık göster - sadece düşüm olduysa
+                if (data.creditsUsed && data.creditsUsed > 0 && data.remainingCredits !== undefined) {
                     showTokenDeduction(data.creditsUsed, data.remainingCredits)
                 }
             }
