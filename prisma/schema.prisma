@@ -288,3 +288,18 @@ model WhatsAppLog {
   @@index([status])
   @@index([createdAt])
 }
+
+// Çerez onayı kayıtları - IP adresleri ile
+model CookieConsent {
+  id          String   @id @default(cuid())
+  ipAddress   String
+  userAgent   String?
+  userId      String? // Oturum açmış kullanıcı varsa
+  consentType String   @default("all") // all, necessary, analytics
+  acceptedAt  DateTime @default(now())
+  expiresAt   DateTime // 30 gün sonra
+
+  @@index([ipAddress])
+  @@index([userId])
+  @@index([acceptedAt])
+}

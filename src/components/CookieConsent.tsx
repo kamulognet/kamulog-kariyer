@@ -30,13 +30,39 @@ export default function CookieConsent() {
         }
     }
 
-    const handleAccept = () => {
+    const handleAccept = async () => {
+        try {
+            // Veritabanına IP ile kaydet
+            await fetch('/api/cookie-consent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ consentType: 'all' })
+            })
+        } catch (error) {
+            console.error('Cookie consent API error:', error)
+        }
+
+        // LocalStorage'a kaydet
         localStorage.setItem('cookie-consent', 'accepted')
+        // Cookie yaz (30 gün)
+        document.cookie = `cookie_consent=accepted; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`
         setIsVisible(false)
     }
 
-    const handleReject = () => {
+    const handleReject = async () => {
+        try {
+            // Reddedenleri de kaydet
+            await fetch('/api/cookie-consent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ consentType: 'necessary' })
+            })
+        } catch (error) {
+            console.error('Cookie consent API error:', error)
+        }
+
         localStorage.setItem('cookie-consent', 'rejected')
+        document.cookie = `cookie_consent=rejected; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`
         setIsVisible(false)
     }
 

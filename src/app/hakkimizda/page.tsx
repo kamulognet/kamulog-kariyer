@@ -176,25 +176,7 @@ export default function HakkimizdaPage() {
                     </div>
                 </div>
 
-                {/* CTA */}
-                <div className="text-center mt-16">
-                    <h2 className="text-2xl font-bold text-white mb-4">Kariyer Yolculuğunuza Başlayın</h2>
-                    <p className="text-slate-400 mb-8">Hemen ücretsiz kayıt olun ve yapay zeka destekli CV oluşturmaya başlayın.</p>
-                    <div className="flex items-center justify-center gap-4">
-                        <Link
-                            href="/register"
-                            className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl hover:opacity-90 transition"
-                        >
-                            Ücretsiz Başla
-                        </Link>
-                        <Link
-                            href="/login"
-                            className="px-8 py-3 bg-slate-700 text-white font-semibold rounded-xl hover:bg-slate-600 transition"
-                        >
-                            Giriş Yap
-                        </Link>
-                    </div>
-                </div>
+
             </main>
         </div>
     )
