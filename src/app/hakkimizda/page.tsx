@@ -72,7 +72,7 @@ export default function HakkimizdaPage() {
             {/* Header */}
             <header className="bg-slate-900/80 backdrop-blur-xl border-b border-white/10 sticky top-0 z-50">
                 <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-3">
+                    <Link href="/" target="_blank" rel="noopener" className="flex items-center gap-3">
                         <Image
                             src="/favicon.jpg"
                             alt="Kariyer Kamulog"
@@ -82,13 +82,19 @@ export default function HakkimizdaPage() {
                         />
                         <span className="text-xl font-bold text-white">KARİYER KAMULOG</span>
                     </Link>
-                    <Link
-                        href="/"
+                    <button
+                        onClick={() => {
+                            if (window.opener || window.history.length <= 1) {
+                                window.close()
+                            } else {
+                                window.location.href = '/'
+                            }
+                        }}
                         className="flex items-center gap-2 text-slate-400 hover:text-white transition"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                        <span className="hidden sm:inline">Geri Dön</span>
-                    </Link>
+                        <span className="hidden sm:inline">Kapat</span>
+                    </button>
                 </div>
             </header>
 

@@ -1,17 +1,33 @@
+'use client'
+
 import Link from 'next/link'
-import { ArrowLeft, Home } from 'lucide-react'
+import Image from 'next/image'
+import { X, Home } from 'lucide-react'
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
+
+    const handleClose = () => {
+        // Yeni sekmede açıldıysa kapat, değilse ana sayfaya git
+        if (window.opener || window.history.length <= 1) {
+            window.close()
+        } else {
+            window.location.href = '/'
+        }
+    }
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
             <header className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-800">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 text-white hover:text-purple-400 transition">
-                        <ArrowLeft className="w-5 h-5" />
-                        <span>Ana Sayfa</span>
-                    </Link>
-                    <Link href="/" className="flex items-center gap-2">
-                        <img src="/logo.jpg" alt="Kariyer Kamulog" className="w-8 h-8 rounded-lg" />
+                    <button
+                        onClick={handleClose}
+                        className="flex items-center gap-2 text-white hover:text-purple-400 transition"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Kapat</span>
+                    </button>
+                    <Link href="/" target="_blank" rel="noopener" className="flex items-center gap-2">
+                        <Image src="/logo.jpg" alt="Kariyer Kamulog" width={32} height={32} className="rounded-lg" />
                         <span className="text-lg font-bold text-white">Kariyer Kamulog</span>
                     </Link>
                 </div>
