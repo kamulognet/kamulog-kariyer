@@ -171,8 +171,9 @@ export async function POST(request: NextRequest) {
                     company: job.company,
                     type: job.type,
                 },
-                creditsUsed: creditCost,
-                remainingCredits: updatedUser.credits,
+                creditsUsed: isUnlimited ? 0 : creditCost,
+                remainingCredits: isUnlimited ? -1 : updatedUser.credits,
+                isUnlimited,
             })
         } else if (action === 'suggest') {
             // Şehir bilgisini belirle: 1) Fatura adresi 2) CV'den
@@ -270,8 +271,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
                 suggestions: suggestedJobs,
                 userCity: userCity || null,
-                creditsUsed: creditCost,
-                remainingCredits: updatedUser.credits,
+                creditsUsed: isUnlimited ? 0 : creditCost,
+                remainingCredits: isUnlimited ? -1 : updatedUser.credits,
+                isUnlimited,
             })
         } else {
             // Toplu eşleştirme
@@ -296,8 +298,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
                 matches,
                 totalJobs: jobs.length,
-                creditsUsed: creditCost,
-                remainingCredits: updatedUser.credits,
+                creditsUsed: isUnlimited ? 0 : creditCost,
+                remainingCredits: isUnlimited ? -1 : updatedUser.credits,
+                isUnlimited,
             })
         }
     } catch (error) {
