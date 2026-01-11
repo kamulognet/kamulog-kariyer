@@ -22,6 +22,7 @@ interface User {
     email: string
     phoneNumber: string | null
     credits: number
+    cvChatTokens?: number
     role: string
     createdAt: string
     subscription: { plan: string; status: string } | null
@@ -53,6 +54,7 @@ export default function AdminUsersPage() {
         email: '',
         phoneNumber: '',
         credits: 0,
+        cvChatTokens: 20,
         role: 'USER',
         plan: 'FREE',
     })
@@ -94,6 +96,7 @@ export default function AdminUsersPage() {
             email: user.email,
             phoneNumber: user.phoneNumber || '',
             credits: user.credits,
+            cvChatTokens: user.cvChatTokens || 20,
             role: user.role,
             plan: user.subscription?.plan || 'FREE',
         })
@@ -103,8 +106,9 @@ export default function AdminUsersPage() {
         if (!editUser) return
 
         try {
-            // Only send credits if explicitly changed
+            // Only send values if explicitly changed
             const creditsChanged = editForm.credits !== editUser.credits
+            const cvChatTokensChanged = editForm.cvChatTokens !== (editUser.cvChatTokens || 20)
             const planChanged = editForm.plan !== (editUser.subscription?.plan || 'FREE')
 
             const payload: any = {
@@ -114,15 +118,18 @@ export default function AdminUsersPage() {
                 role: editForm.role,
             }
 
-            // If plan changed and credits not manually changed, 
-            // don't send credits so API can add plan tokens
-            if (planChanged && !creditsChanged) {
+            // If plan changed and tokens not manually changed, 
+            // don't send them so API can add plan tokens
+            if (planChanged && !creditsChanged && !cvChatTokensChanged) {
                 payload.plan = editForm.plan
-                // Don't include credits - let API add tokens from plan
+                // Don't include credits/cvChatTokens - let API add tokens from plan
             } else {
-                // Credits explicitly changed, send the new value
+                // Values explicitly changed, send them
                 if (creditsChanged) {
                     payload.credits = editForm.credits
+                }
+                if (cvChatTokensChanged) {
+                    payload.cvChatTokens = editForm.cvChatTokens
                 }
                 if (planChanged) {
                     payload.plan = editForm.plan
@@ -553,6 +560,17 @@ export default function AdminUsersPage() {
                                     />
                                 </div>
                                 <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">CV Chat Jetonu</label>
+                                    <input
+                                        type="number"
+                                        value={editForm.cvChatTokens}
+                                        onChange={(e) => setEditForm({ ...editForm, cvChatTokens: parseInt(e.target.value) || 0 })}
+                                        className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
                                     <label className="block text-sm font-medium text-slate-400 mb-1">Rol</label>
                                     <select
                                         value={editForm.role}
@@ -563,18 +581,18 @@ export default function AdminUsersPage() {
                                         <option value="ADMIN">ADMIN</option>
                                     </select>
                                 </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Plan</label>
-                                <select
-                                    value={editForm.plan}
-                                    onChange={(e) => setEditForm({ ...editForm, plan: e.target.value })}
-                                    className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
-                                >
-                                    <option value="FREE">FREE</option>
-                                    <option value="BASIC">BASIC</option>
-                                    <option value="PREMIUM">PREMIUM</option>
-                                </select>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Plan</label>
+                                    <select
+                                        value={editForm.plan}
+                                        onChange={(e) => setEditForm({ ...editForm, plan: e.target.value })}
+                                        className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                    >
+                                        <option value="FREE">FREE</option>
+                                        <option value="BASIC">BASIC</option>
+                                        <option value="PREMIUM">PREMIUM</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div className="p-6 border-t border-slate-700 flex justify-end gap-3">

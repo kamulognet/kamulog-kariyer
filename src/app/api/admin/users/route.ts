@@ -10,8 +10,8 @@ const DEFAULT_PLAN_TOKENS: Record<string, number> = {
     PREMIUM: 500
 }
 
-// Get plan tokens from settings
-async function getPlanTokens(planId: string): Promise<number> {
+// Get plan tokens from settings (returns both credits and cvChatTokens)
+async function getPlanTokens(planId: string): Promise<{ tokens: number; cvChatTokens: number }> {
     console.log(`[admin/users getPlanTokens] Looking for plan: ${planId}`)
 
     try {
@@ -26,11 +26,13 @@ async function getPlanTokens(planId: string): Promise<number> {
             console.log(`[admin/users getPlanTokens] Parsed plans count: ${plans.length}`)
 
             const plan = plans.find((p: any) => p.id === planId)
-            console.log(`[admin/users getPlanTokens] Found plan for ${planId}:`, plan ? `tokens=${plan.tokens}` : 'NOT FOUND')
+            console.log(`[admin/users getPlanTokens] Found plan for ${planId}:`, plan ? `tokens=${plan.tokens}, cvChatTokens=${plan.cvChatTokens}` : 'NOT FOUND')
 
-            if (plan?.tokens !== undefined && plan.tokens !== null) {
-                console.log(`[admin/users getPlanTokens] Returning tokens from settings: ${plan.tokens}`)
-                return plan.tokens
+            if (plan) {
+                return {
+                    tokens: plan.tokens ?? DEFAULT_PLAN_TOKENS[planId] ?? 0,
+                    cvChatTokens: plan.cvChatTokens ?? 20
+                }
             }
         }
     } catch (error) {
@@ -39,7 +41,7 @@ async function getPlanTokens(planId: string): Promise<number> {
 
     const fallbackTokens = DEFAULT_PLAN_TOKENS[planId] || 0
     console.log(`[admin/users getPlanTokens] Using fallback tokens for ${planId}: ${fallbackTokens}`)
-    return fallbackTokens
+    return { tokens: fallbackTokens, cvChatTokens: 20 }
 }
 
 // Admin middleware
@@ -87,6 +89,7 @@ export async function GET(req: NextRequest) {
                     email: true,
                     phoneNumber: true,
                     credits: true,
+                    cvChatTokens: true,
                     role: true,
                     createdAt: true,
                     subscription: {
@@ -136,7 +139,7 @@ export async function PUT(req: NextRequest) {
 
     try {
         const body = await req.json()
-        const { userId, userIds, name, phoneNumber, credits, role, plan } = body
+        const { userId, userIds, name, phoneNumber, credits, cvChatTokens, role, plan } = body
 
         // Toplu İşlem
         if (userIds && Array.isArray(userIds)) {
@@ -179,6 +182,7 @@ export async function PUT(req: NextRequest) {
         if (name !== undefined) updateData.name = name
         if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber
         if (credits !== undefined) updateData.credits = credits
+        if (cvChatTokens !== undefined) updateData.cvChatTokens = cvChatTokens
         if (role && ['USER', 'ADMIN'].includes(role)) updateData.role = role
 
         const user = await prisma.user.update({
@@ -196,6 +200,7 @@ export async function PUT(req: NextRequest) {
 
         // Plan güncellemesi varsa subscription'ı da güncelle
         let tokensAdded = 0
+        let cvChatTokensAdded = 0
 
         if (plan && plan !== 'FREE') {
             const existingSubscription = await prisma.subscription.findUnique({
@@ -206,7 +211,9 @@ export async function PUT(req: NextRequest) {
             const orderCode = generateOrderCode()
 
             // Get tokens from admin plan settings
-            tokensAdded = await getPlanTokens(plan)
+            const planTokens = await getPlanTokens(plan)
+            tokensAdded = planTokens.tokens
+            cvChatTokensAdded = planTokens.cvChatTokens
 
             // Update or create subscription
             if (existingSubscription) {
@@ -231,11 +238,19 @@ export async function PUT(req: NextRequest) {
                 })
             }
 
-            // Add tokens to user credits (if credits not manually set)
+            // Add tokens to user (if not manually set)
+            const tokenUpdateData: any = {}
             if (tokensAdded > 0 && credits === undefined) {
+                tokenUpdateData.credits = { increment: tokensAdded }
+            }
+            if (cvChatTokensAdded > 0 && cvChatTokens === undefined) {
+                tokenUpdateData.cvChatTokens = cvChatTokensAdded // SET - not increment
+            }
+
+            if (Object.keys(tokenUpdateData).length > 0) {
                 await prisma.user.update({
                     where: { id: userId },
-                    data: { credits: { increment: tokensAdded } }
+                    data: tokenUpdateData
                 })
             }
 
@@ -267,7 +282,7 @@ export async function PUT(req: NextRequest) {
                     amount: planPrice,
                     status: 'COMPLETED',
                     paymentMethod: 'ADMIN',
-                    notes: `Admin tarafından verildi: ${session.user.email}. ${tokensAdded} jeton yüklendi.`
+                    notes: `Admin tarafından verildi: ${session.user.email}. ${tokensAdded} kredi + ${cvChatTokensAdded} CV chat jetonu yüklendi.`
                 }
             })
         } else if (plan === 'FREE') {
@@ -296,8 +311,9 @@ export async function PUT(req: NextRequest) {
                 targetType: 'USER',
                 targetId: userId,
                 details: JSON.stringify({
-                    changes: { name, phoneNumber, credits, role, plan },
+                    changes: { name, phoneNumber, credits, cvChatTokens, role, plan },
                     tokensAdded,
+                    cvChatTokensAdded,
                     updatedBy: session.user.email,
                 }),
             },
@@ -305,10 +321,11 @@ export async function PUT(req: NextRequest) {
 
         return NextResponse.json({
             user,
-            message: tokensAdded > 0
-                ? `Kullanıcı güncellendi ve ${tokensAdded} jeton yüklendi`
+            message: tokensAdded > 0 || cvChatTokensAdded > 0
+                ? `Kullanıcı güncellendi. ${tokensAdded > 0 ? `${tokensAdded} kredi` : ''} ${cvChatTokensAdded > 0 ? `${cvChatTokensAdded} CV chat jetonu` : ''} yüklendi.`
                 : 'Kullanıcı güncellendi',
-            tokensAdded
+            tokensAdded,
+            cvChatTokensAdded
         })
     } catch (error) {
         console.error('Update user error:', error)
