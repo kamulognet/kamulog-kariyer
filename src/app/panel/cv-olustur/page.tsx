@@ -35,6 +35,7 @@ export default function CVBuilderPage() {
     const [tokenCost, setTokenCost] = useState(2)
     const [userCvChatTokens, setUserCvChatTokens] = useState(0) // Kullanıcının CV chat jeton bakiyesi
     const [planCvChatTokens, setPlanCvChatTokens] = useState(20) // Plan için toplam CV chat jetonu
+    const [isUnlimited, setIsUnlimited] = useState(false) // Sınırsız plan mı
     const usedTokens = messages.filter(m => m.role === 'user').length * tokenCost
     const remainingSessionTokens = Math.max(0, sessionTokenLimit - usedTokens)
 
@@ -53,6 +54,7 @@ export default function CVBuilderPage() {
                     if (data.tokenCost) setTokenCost(data.tokenCost)
                     if (data.cvChatTokens !== undefined) setUserCvChatTokens(data.cvChatTokens)
                     if (data.planCvChatTokens !== undefined) setPlanCvChatTokens(data.planCvChatTokens)
+                    if (data.isUnlimited !== undefined) setIsUnlimited(data.isUnlimited)
                 }
             } catch (e) {
                 console.error('Failed to load chat settings')
@@ -451,59 +453,73 @@ export default function CVBuilderPage() {
 
                 {step === 'chat' && (
                     <div className="h-[calc(100vh-200px)]">
-                        {/* Jeton Bakiyesi ve Session Limiti */}
-                        <div className="mb-4 p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
-                            {/* Toplam Bakiye */}
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-blue-400 text-lg">🤖</span>
-                                    <span className="text-white font-bold">CV Chat Jeton Bakiyeniz:</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <span className={`text-2xl font-bold ${userCvChatTokens <= 5 ? 'text-red-400' : 'text-green-400'}`}>
-                                        {userCvChatTokens}
-                                    </span>
-                                    <span className="text-slate-400 text-lg">/</span>
-                                    <span className="text-slate-300 text-lg">{planCvChatTokens}</span>
+                        {/* Jeton Bakiyesi ve Session Limiti - Sınırsız değilse göster */}
+                        {isUnlimited ? (
+                            <div className="mb-4 p-4 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 rounded-xl">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-3xl">♾️</span>
+                                    <div>
+                                        <p className="text-white font-bold text-lg">Sınırsız Premium Erişim</p>
+                                        <p className="text-purple-300 text-sm">Tüm CV özellikleri sınırsız kullanımınızda</p>
+                                    </div>
                                 </div>
                             </div>
+                        ) : (
+                            <>
+                                <div className="mb-4 p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
+                                    {/* Toplam Bakiye */}
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-blue-400 text-lg">🤖</span>
+                                            <span className="text-white font-bold">CV Chat Jeton Bakiyeniz:</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <span className={`text-2xl font-bold ${userCvChatTokens <= 5 ? 'text-red-400' : 'text-green-400'}`}>
+                                                {userCvChatTokens}
+                                            </span>
+                                            <span className="text-slate-400 text-lg">/</span>
+                                            <span className="text-slate-300 text-lg">{planCvChatTokens}</span>
+                                        </div>
+                                    </div>
 
-                            {/* Sohbet Limiti */}
-                            <div className="flex items-center gap-4 pt-3 border-t border-slate-700">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-slate-400 text-sm">Bu Sohbet:</span>
-                                    <span className="text-white font-medium">{usedTokens}/{sessionTokenLimit}</span>
+                                    {/* Sohbet Limiti */}
+                                    <div className="flex items-center gap-4 pt-3 border-t border-slate-700">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-slate-400 text-sm">Bu Sohbet:</span>
+                                            <span className="text-white font-medium">{usedTokens}/{sessionTokenLimit}</span>
+                                        </div>
+                                        <div className="w-px h-4 bg-slate-600"></div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-slate-400 text-sm">Kalan:</span>
+                                            <span className={`font-medium ${remainingSessionTokens <= 5 ? 'text-red-400' : 'text-green-400'}`}>
+                                                {remainingSessionTokens}
+                                            </span>
+                                        </div>
+                                        <div className="flex-1 text-right text-xs text-slate-500">
+                                            Her mesaj {tokenCost} jeton
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-px h-4 bg-slate-600"></div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-slate-400 text-sm">Kalan:</span>
-                                    <span className={`font-medium ${remainingSessionTokens <= 5 ? 'text-red-400' : 'text-green-400'}`}>
-                                        {remainingSessionTokens}
-                                    </span>
-                                </div>
-                                <div className="flex-1 text-right text-xs text-slate-500">
-                                    Her mesaj {tokenCost} jeton
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* Bakiye uyarısı */}
-                        {userCvChatTokens <= 5 && userCvChatTokens > 0 && (
-                            <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm">
-                                ⚠️ CV chat jetonunuz azalıyor! Kalan: {userCvChatTokens} jeton
-                            </div>
-                        )}
-                        {userCvChatTokens <= 0 && (
-                            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
-                                🚫 CV chat jetonunuz bitti. Yeni jeton almak için aboneliğinizi yükseltin.
-                            </div>
-                        )}
+                                {/* Bakiye uyarısı */}
+                                {userCvChatTokens <= 5 && userCvChatTokens > 0 && (
+                                    <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm">
+                                        ⚠️ CV chat jetonunuz azalıyor! Kalan: {userCvChatTokens} jeton
+                                    </div>
+                                )}
+                                {userCvChatTokens <= 0 && (
+                                    <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                                        🚫 CV chat jetonunuz bitti. Yeni jeton almak için aboneliğinizi yükseltin.
+                                    </div>
+                                )}
 
-                        {/* Session limit uyarısı */}
-                        {remainingSessionTokens <= 0 && (
-                            <div className="mb-4 p-3 bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 text-sm">
-                                ⚠️ Bu sohbette session limitine ulaştınız ({sessionTokenLimit} jeton). Yeni CV başlatın.
-                            </div>
+                                {/* Session limit uyarısı */}
+                                {remainingSessionTokens <= 0 && (
+                                    <div className="mb-4 p-3 bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 text-sm">
+                                        ⚠️ Bu sohbette session limitine ulaştınız ({sessionTokenLimit} jeton). Yeni CV başlatın.
+                                    </div>
+                                )}
+                            </>
                         )}
 
                         <ChatWindow
