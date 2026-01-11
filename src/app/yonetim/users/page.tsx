@@ -75,7 +75,7 @@ export default function AdminUsersPage() {
     const loadUsers = async () => {
         setLoading(true)
         try {
-            const params = new URLSearchParams({ page: String(page), limit: '20' })
+            const params = new URLSearchParams({ page: String(page), limit: '50' })
             if (search) params.set('search', search)
 
             const res = await fetch(`/api/admin/users?${params}`)
@@ -372,8 +372,9 @@ export default function AdminUsersPage() {
 
             {/* Users Table */}
             <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-700 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
+                {/* Scrollbar her zaman görünür wrapper */}
+                <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-300px)]" style={{ scrollbarGutter: 'stable' }}>
+                    <table className="w-full min-w-[1000px]">
                         <thead className="bg-slate-900/50">
                             <tr>
                                 <th className="px-6 py-4 text-left">
