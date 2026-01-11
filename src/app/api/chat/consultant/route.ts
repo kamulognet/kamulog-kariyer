@@ -3,16 +3,42 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// Premium kontrolü
+// Premium/Sınırsız kontrolü - isUnlimited flag'ını kontrol eder
 async function isPremiumUser(userId: string): Promise<boolean> {
     const subscription = await prisma.subscription.findFirst({
         where: {
             userId,
-            status: 'ACTIVE',
-            plan: 'PREMIUM'
+            status: 'ACTIVE'
         }
     })
-    return !!subscription
+
+    if (!subscription) {
+        return false
+    }
+
+    // Plan adı PREMIUM ise doğrudan kabul et (geriye dönük uyumluluk)
+    if (subscription.plan === 'PREMIUM') {
+        return true
+    }
+
+    // SiteSettings'ten subscription_plans JSON'ını çek
+    const plansSetting = await prisma.siteSettings.findUnique({
+        where: { key: 'subscription_plans' }
+    })
+
+    if (plansSetting?.value) {
+        try {
+            const plans = JSON.parse(plansSetting.value as string)
+            const userPlan = plans.find((p: { name: string }) => p.name === subscription.plan)
+            if (userPlan?.isUnlimited) {
+                return true
+            }
+        } catch (e) {
+            console.error('Failed to parse subscription plans:', e)
+        }
+    }
+
+    return false
 }
 
 // GET - Sohbet odaları veya mesajları getir
