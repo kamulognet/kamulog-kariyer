@@ -38,7 +38,7 @@ const navItems = [
     { href: '/yonetim/whatsapp', label: 'WhatsApp Butonu', icon: MessageCircle, adminOnly: true },
     { href: '/yonetim/whatsapp-bot', label: 'WhatsApp Bot', icon: Smartphone, adminOnly: true },
     { href: '/yonetim/medya', label: 'Medya', icon: Image, adminOnly: false },
-    { href: '/yonetim/yasal-sayfalar', label: 'Yasal Sayfalar', icon: FileText, adminOnly: false },
+    { href: '/yonetim/yasal-sayfalar', label: 'Yasal Sayfalar', icon: FileText, adminOnly: true },
     { href: '/yonetim/logs', label: 'Sistem Logları', icon: FileText, adminOnly: true },
 ]
 
