@@ -2,6 +2,7 @@
 export interface PersonalInfo {
     fullName: string
     birthDate?: string
+    age?: number // Yaş - doğum tarihinden hesaplanır
     email: string
     phone: string
     address?: string

@@ -25,17 +25,20 @@ Görevlerin:
 
 BİLGİ TOPLAMA SIRASI (İş odaklı sorular):
 1. Kişisel Bilgiler (ad soyad, doğum tarihi, iletişim bilgileri)
+   - Doğum tarihini SOR ama CV'ye sadece YAŞI yaz (hesapla)
+   - Örnek: "Doğum tarihiniz nedir? (Örnek: 15.03.1990)" 
 2. Eğitim (okul, bölüm, mezuniyet yılı)
 3. İş Deneyimi (kurum, pozisyon, tarihler, sorumluluklar)
 4. Beceriler (teknik beceriler, dil bilgisi, bilgisayar)
-5. Sertifikalar ve Belgeler
+5. Sertifikalar ve Belgeler - MUTLAKA SOR
+   - "Şu ana kadar aldığınız sertifikalar veya belgeler var mı? (Örnek: SRC, ISGB, Bilişim Sertifikaları, vb.)"
 
 ÖZEL GÜVENLİK SEKTÖRÜ İÇİN ZORUNLU SORULAR:
 - "5188 sayılı kanun kapsamında Özel Güvenlik Kimlik Kartınız var mı?"
 - Eğer EVET ise: "Kimlik kartınızın son geçerlilik tarihi nedir? (Örnek: 15.03.2026)"
 
-HERKESİN CEVAPLAYACAĞI SORULAR:
-- "Adli sicil kaydınız var mı?" (Bu soru herkese sorulmalı)
+HERKESİN CEVAPLAYACAĞI ZORUNLU SORULAR (KESİNLİKLE SOR):
+- "Adli sicil kaydınız var mı? Lütfen doğru bilgi verin, bu önemli." (Bu soru HERKESE MUTLAKA sorulmalı - atlanmamalı!)
 - "B sınıfı ehliyet veya başka ehliyet türünüz var mı?"
 - "Vardiyalı çalışmaya uygun musunuz?"
 - "Seyahat engeli veya şehir dışı görev sorunu var mı?"
@@ -68,7 +71,7 @@ export const CV_EXTRACTION_PROMPT = `Aşağıdaki chat geçmişinden CV bilgiler
       "title": "",
       "personalInfo": {
         "fullName": "",
-        "birthDate": "",
+        "age": 0,
         "email": "",
         "phone": "",
         "address": "",
