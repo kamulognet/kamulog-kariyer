@@ -208,7 +208,7 @@ export async function PUT(req: NextRequest) {
             },
         })
 
-        // MODERATOR rolü atandıysa otomatik danışman kaydı oluştur
+        // MODERATOR rolü atandıysa otomatik danışman kaydı ve PREMIUM abonelik oluştur
         if (role === 'MODERATOR') {
             // Kullanıcıya bağlı danışman var mı kontrol et
             const existingConsultant = await prisma.consultant.findUnique({
@@ -229,6 +229,42 @@ export async function PUT(req: NextRequest) {
                 })
                 console.log(`[Users API] Auto-created consultant for MODERATOR user: ${userId}`)
             }
+
+            // PREMIUM abonelik oluştur veya güncelle
+            const existingSubscription = await prisma.subscription.findUnique({
+                where: { userId }
+            })
+
+            if (!existingSubscription) {
+                // Yeni PREMIUM abonelik oluştur (10 yıl süre ile - pratik olarak sınırsız)
+                await prisma.subscription.create({
+                    data: {
+                        userId,
+                        plan: 'PREMIUM',
+                        status: 'ACTIVE',
+                        startDate: new Date(),
+                        endDate: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000), // 10 yıl
+                    }
+                })
+                console.log(`[Users API] Auto-created PREMIUM subscription for MODERATOR user: ${userId}`)
+            } else if (existingSubscription.plan !== 'PREMIUM') {
+                // Mevcut aboneliği PREMIUM'a yükselt
+                await prisma.subscription.update({
+                    where: { userId },
+                    data: {
+                        plan: 'PREMIUM',
+                        status: 'ACTIVE',
+                        endDate: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000),
+                    }
+                })
+                console.log(`[Users API] Upgraded subscription to PREMIUM for MODERATOR user: ${userId}`)
+            }
+
+            // Kullanıcı planını da PREMIUM yap
+            await prisma.user.update({
+                where: { id: userId },
+                data: { plan: 'PREMIUM' }
+            })
         }
 
         // Plan güncellemesi varsa subscription'ı da güncelle
