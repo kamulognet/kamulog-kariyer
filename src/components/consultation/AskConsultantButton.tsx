@@ -30,10 +30,11 @@ export default function AskConsultantButton({
             }
 
             try {
-                const res = await fetch('/api/user/subscription')
+                // isUnlimited kontrolü için chat-limits API kullan
+                const res = await fetch('/api/settings/chat-limits')
                 if (res.ok) {
                     const data = await res.json()
-                    setIsPremium(data.plan === 'PREMIUM' && data.status === 'ACTIVE')
+                    setIsPremium(data.isUnlimited === true)
                 }
             } catch (e) {
                 console.error('Error checking premium:', e)
@@ -91,10 +92,11 @@ export function ConsultantPromoCard({ className = '' }: { className?: string }) 
             if (!session?.user?.id) return
 
             try {
-                const res = await fetch('/api/user/subscription')
+                // isUnlimited kontrolü için chat-limits API kullan
+                const res = await fetch('/api/settings/chat-limits')
                 if (res.ok) {
                     const data = await res.json()
-                    setIsPremium(data.plan === 'PREMIUM' && data.status === 'ACTIVE')
+                    setIsPremium(data.isUnlimited === true)
                 }
             } catch (e) {
                 console.error('Error checking premium:', e)
