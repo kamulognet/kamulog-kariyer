@@ -13,17 +13,31 @@ export function generateOrderCode(): string {
 // Format phone number to +90 format
 export function formatPhoneNumber(phone: string): string {
     // Remove all non-numeric characters
-    const cleaned = phone.replace(/\D/g, '')
+    let cleaned = phone.replace(/\D/g, '')
 
-    // If starts with 0, remove it
-    const normalized = cleaned.startsWith('0') ? cleaned.slice(1) : cleaned
-
-    // Ensure 10 digits
-    if (normalized.length !== 10) {
-        throw new Error('Phone number must be 10 digits')
+    // If starts with 90 and has 12 digits total, it's already formatted
+    if (cleaned.startsWith('90') && cleaned.length === 12) {
+        return `+${cleaned}`
     }
 
-    return `+90${normalized}`
+    // If starts with 0, remove it
+    if (cleaned.startsWith('0')) {
+        cleaned = cleaned.slice(1)
+    }
+
+    // If it's 10 digits (without country code), add +90
+    if (cleaned.length === 10) {
+        return `+90${cleaned}`
+    }
+
+    // If it's 11 digits starting with 90, format it
+    if (cleaned.length === 11 && cleaned.startsWith('90')) {
+        return `+${cleaned}`
+    }
+
+    // For any other case, just ensure it starts with +
+    console.warn(`[formatPhoneNumber] Unexpected format: ${phone} -> cleaned: ${cleaned}`)
+    return cleaned.startsWith('+') ? phone : `+${cleaned}`
 }
 
 // Format currency for display

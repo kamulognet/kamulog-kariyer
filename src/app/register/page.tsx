@@ -206,7 +206,7 @@ export default function RegisterPage() {
 
                             <div>
                                 <label htmlFor="phoneNumber" className="block text-sm font-medium text-blue-200 mb-2">
-                                    Telefon Numarası <span className="text-green-400">(WhatsApp Doğrulaması için zorunlu)</span>
+                                    Telefon Numarası <span className="text-green-400">(WhatsApp doğrulaması için zorunlu)</span>
                                 </label>
                                 <div className="flex rounded-lg shadow-sm">
                                     <span className="inline-flex items-center px-4 rounded-l-lg border border-r-0 border-white/20 bg-white/5 text-slate-300 text-sm">
