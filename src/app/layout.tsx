@@ -154,13 +154,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/logo.png", type: "image/png" },
+      { url: "/favicon.jpg", type: "image/jpeg", sizes: "any" },
     ],
     apple: [
-      { url: "/logo.png", sizes: "180x180", type: "image/png" },
+      { url: "/favicon.jpg", sizes: "180x180", type: "image/jpeg" },
     ],
-    shortcut: "/favicon.ico",
+    shortcut: "/favicon.jpg",
   },
   manifest: "/site.webmanifest",
   alternates: {
@@ -183,11 +182,13 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <head>
-        <link rel="icon" href="/logo.jpg" type="image/jpeg" />
-        <link rel="apple-touch-icon" href="/logo.jpg" />
+        {/* Favicon - Browser Tab Icon */}
+        <link rel="icon" href="/favicon.jpg" type="image/jpeg" sizes="any" />
+        <link rel="shortcut icon" href="/favicon.jpg" type="image/jpeg" />
+        <link rel="apple-touch-icon" href="/favicon.jpg" />
         <meta name="theme-color" content="#7c3aed" />
         <meta name="msapplication-TileColor" content="#7c3aed" />
-        <meta name="msapplication-TileImage" content="/logo.jpg" />
+        <meta name="msapplication-TileImage" content="/favicon.jpg" />
 
         {/* Structured Data for SEO */}
         <script
