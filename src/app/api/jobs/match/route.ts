@@ -31,6 +31,33 @@ async function getTokenCosts() {
     return DEFAULT_TOKEN_COSTS
 }
 
+// Sınırsız plan kontrolü
+async function hasUnlimitedPlan(userId: string): Promise<boolean> {
+    try {
+        const subscription = await prisma.subscription.findUnique({
+            where: { userId },
+            select: { plan: true, status: true }
+        })
+
+        if (!subscription || subscription.status !== 'ACTIVE') return false
+
+        // Plan ayarlarından isUnlimited kontrolü
+        const planSetting = await prisma.siteSettings.findUnique({
+            where: { key: 'subscription_plans' }
+        })
+
+        if (planSetting?.value) {
+            const plans = JSON.parse(planSetting.value)
+            const userPlan = plans.find((p: any) => p.id === subscription.plan)
+            return userPlan?.isUnlimited === true
+        }
+        return false
+    } catch (error) {
+        console.error('Error checking unlimited plan:', error)
+        return false
+    }
+}
+
 // POST - CV ile iş ilanlarını eşleştir
 export async function POST(request: NextRequest) {
     try {
@@ -41,6 +68,13 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json()
         const { cvId, jobId, type, action = 'match' } = body
+
+        // Sınırsız plan kontrolü
+        const isUnlimited = await hasUnlimitedPlan(session.user.id)
+
+        if (isUnlimited) {
+            console.log(`[Job Match] User ${session.user.id} has UNLIMITED plan - skipping credit checks`)
+        }
 
         // Kullanıcının kredisi ve şehir bilgisi var mı kontrol et
         const user = await prisma.user.findUnique({
@@ -61,24 +95,28 @@ export async function POST(request: NextRequest) {
         const creditCost = action === 'suggest' ? tokenCosts.suggest :
             action === 'analyze' ? tokenCosts.analyze : tokenCosts.match
 
-        console.log(`[Job Match] Action: ${action}, Token cost: ${creditCost}, User credits: ${user.credits}, Plan: ${user.subscription?.plan || 'FREE'}`)
+        console.log(`[Job Match] Action: ${action}, Token cost: ${creditCost}, User credits: ${user.credits}, Plan: ${user.subscription?.plan || 'FREE'}, Unlimited: ${isUnlimited}`)
 
-        // Jeton kontrolü - HERKESİN jetonu düşer (Premium dahil)
-        if (user.credits < creditCost) {
-            return NextResponse.json({
-                error: `Bu işlem için ${creditCost} jeton gerekiyor. Mevcut jetonunuz: ${user.credits}`,
-                credits: user.credits,
-                required: creditCost,
-            }, { status: 403 })
+        let updatedUser = { credits: user.credits }
+
+        // Sınırsız değilse jeton kontrolü yap
+        if (!isUnlimited) {
+            if (user.credits < creditCost) {
+                return NextResponse.json({
+                    error: `Bu işlem için ${creditCost} jeton gerekiyor. Mevcut jetonunuz: ${user.credits}`,
+                    credits: user.credits,
+                    required: creditCost,
+                }, { status: 403 })
+            }
+
+            // Jetonları düş
+            updatedUser = await prisma.user.update({
+                where: { id: session.user.id },
+                data: { credits: { decrement: creditCost } },
+                select: { credits: true }
+            })
+            console.log(`[Job Match] Deducted ${creditCost} tokens from user ${session.user.id}. New balance: ${updatedUser.credits}`)
         }
-
-        // Jetonları düş
-        const updatedUser = await prisma.user.update({
-            where: { id: session.user.id },
-            data: { credits: { decrement: creditCost } },
-            select: { credits: true }
-        })
-        console.log(`[Job Match] Deducted ${creditCost} tokens from user ${session.user.id}. New balance: ${updatedUser.credits}`)
 
         // CV'yi getir
         const cv = await prisma.cV.findFirst({

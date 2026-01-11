@@ -22,6 +22,32 @@ async function getAnalyzeTokenCost() {
     return DEFAULT_ANALYZE_TOKEN_COST
 }
 
+// Sınırsız plan kontrolü
+async function hasUnlimitedPlan(userId: string): Promise<boolean> {
+    try {
+        const subscription = await prisma.subscription.findUnique({
+            where: { userId },
+            select: { plan: true, status: true }
+        })
+
+        if (!subscription || subscription.status !== 'ACTIVE') return false
+
+        const planSetting = await prisma.siteSettings.findUnique({
+            where: { key: 'subscription_plans' }
+        })
+
+        if (planSetting?.value) {
+            const plans = JSON.parse(planSetting.value)
+            const userPlan = plans.find((p: any) => p.id === subscription.plan)
+            return userPlan?.isUnlimited === true
+        }
+        return false
+    } catch (error) {
+        console.error('Error checking unlimited plan:', error)
+        return false
+    }
+}
+
 export async function POST(req: NextRequest) {
     try {
         const session = await getServerSession(authOptions)
@@ -35,6 +61,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'CV ID ve İlan ID gerekli' }, { status: 400 })
         }
 
+        // Sınırsız plan kontrolü
+        const isUnlimited = await hasUnlimitedPlan(session.user.id)
+
+        if (isUnlimited) {
+            console.log(`[Job Analyze] User ${session.user.id} has UNLIMITED plan - skipping credit checks`)
+        }
+
         // Jeton maliyetini al
         const tokenCost = await getAnalyzeTokenCost()
 
@@ -44,15 +77,39 @@ export async function POST(req: NextRequest) {
             select: { credits: true }
         })
 
-        if (!user || user.credits < tokenCost) {
-            return NextResponse.json({
-                error: `Bu analiz için ${tokenCost} jeton gerekiyor. Mevcut jetonunuz: ${user?.credits || 0}`,
-                credits: user?.credits || 0,
-                required: tokenCost,
-            }, { status: 403 })
+        let updatedUser = { credits: user?.credits || 0 }
+
+        // Sınırsız değilse jeton kontrolü ve düşürme
+        if (!isUnlimited) {
+            if (!user || user.credits < tokenCost) {
+                return NextResponse.json({
+                    error: `Bu analiz için ${tokenCost} jeton gerekiyor. Mevcut jetonunuz: ${user?.credits || 0}`,
+                    credits: user?.credits || 0,
+                    required: tokenCost,
+                }, { status: 403 })
+            }
+
+            // Verileri getir
+            const [cv, job] = await Promise.all([
+                prisma.cV.findUnique({ where: { id: cvId } }),
+                prisma.jobListing.findUnique({ where: { id: jobId } }),
+            ])
+
+            if (!cv || !job) {
+                return NextResponse.json({ error: 'Veri bulunamadı' }, { status: 404 })
+            }
+
+            // Jetonları düş
+            updatedUser = await prisma.user.update({
+                where: { id: session.user.id },
+                data: { credits: { decrement: tokenCost } },
+                select: { credits: true }
+            })
+
+            console.log(`[Job Analyze] Deducted ${tokenCost} tokens from user ${session.user.id}. New balance: ${updatedUser.credits}`)
         }
 
-        // Verileri getir
+        // Verileri getir (sınırsız kullanıcılar için de gerekli)
         const [cv, job] = await Promise.all([
             prisma.cV.findUnique({ where: { id: cvId } }),
             prisma.jobListing.findUnique({ where: { id: jobId } }),
@@ -61,15 +118,6 @@ export async function POST(req: NextRequest) {
         if (!cv || !job) {
             return NextResponse.json({ error: 'Veri bulunamadı' }, { status: 404 })
         }
-
-        // Jetonları düş
-        const updatedUser = await prisma.user.update({
-            where: { id: session.user.id },
-            data: { credits: { decrement: tokenCost } },
-            select: { credits: true }
-        })
-
-        console.log(`[Job Analyze] Deducted ${tokenCost} tokens from user ${session.user.id}. New balance: ${updatedUser.credits}`)
 
         // AI Analizi
         const cvData = JSON.parse(cv.data)
@@ -93,8 +141,9 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
             analysis,
-            creditsUsed: tokenCost,
-            remainingCredits: updatedUser.credits,
+            creditsUsed: isUnlimited ? 0 : tokenCost,
+            remainingCredits: isUnlimited ? -1 : updatedUser.credits,
+            isUnlimited,
         })
     } catch (error) {
         console.error('Analysis error:', error)
