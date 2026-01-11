@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { User, LogOut, Shield, LayoutDashboard, FileText, Briefcase, Coins, Sparkles, Phone, Menu, X, Home, Crown } from 'lucide-react'
@@ -10,6 +10,27 @@ export default function PanelHeader() {
     const { data: session } = useSession()
     const { credits } = useToast()
     const [menuOpen, setMenuOpen] = useState(false)
+    const [isUnlimited, setIsUnlimited] = useState(false)
+
+    useEffect(() => {
+        // Sınırsız plan kontrolü
+        const checkUnlimited = async () => {
+            try {
+                const res = await fetch('/api/settings/chat-limits')
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.isUnlimited !== undefined) {
+                        setIsUnlimited(data.isUnlimited)
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to check unlimited status')
+            }
+        }
+        if (session) {
+            checkUnlimited()
+        }
+    }, [session])
 
     if (!session) return null
 
@@ -73,10 +94,17 @@ export default function PanelHeader() {
                         {/* Right: Credits + User */}
                         <div className="flex items-center gap-2 lg:gap-4">
                             {/* Credits Badge - Always visible */}
-                            <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-full">
-                                <Coins className="w-3.5 h-3.5 text-yellow-500" />
-                                <span className="text-sm font-bold text-yellow-500">{displayCredits}</span>
-                            </div>
+                            {isUnlimited ? (
+                                <div className="flex items-center gap-1.5 bg-purple-500/10 border border-purple-500/20 px-2 py-1 rounded-full">
+                                    <span className="text-sm">♾️</span>
+                                    <span className="text-sm font-bold text-purple-400">Sınırsız</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-full">
+                                    <Coins className="w-3.5 h-3.5 text-yellow-500" />
+                                    <span className="text-sm font-bold text-yellow-500">{displayCredits}</span>
+                                </div>
+                            )}
 
                             {/* Sub Status - Hidden on mobile */}
                             {session.user.subscription?.status === 'ACTIVE' && (
@@ -162,10 +190,17 @@ export default function PanelHeader() {
                     </div>
                     {/* Mobile Credits & Plan */}
                     <div className="flex items-center gap-2 mt-3">
-                        <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-full">
-                            <Coins className="w-3.5 h-3.5 text-yellow-500" />
-                            <span className="text-sm font-bold text-yellow-500">{displayCredits} Kredi</span>
-                        </div>
+                        {isUnlimited ? (
+                            <div className="flex items-center gap-1.5 bg-purple-500/10 border border-purple-500/20 px-2 py-1 rounded-full">
+                                <span className="text-sm">♾️</span>
+                                <span className="text-sm font-bold text-purple-400">Sınırsız</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-full">
+                                <Coins className="w-3.5 h-3.5 text-yellow-500" />
+                                <span className="text-sm font-bold text-yellow-500">{displayCredits} Kredi</span>
+                            </div>
+                        )}
                         {session.user.subscription?.status === 'ACTIVE' && (
                             <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full border ${session.user.subscription.plan === 'PREMIUM'
                                 ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
@@ -190,8 +225,8 @@ export default function PanelHeader() {
                                 href={item.href}
                                 onClick={() => setMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${item.isPremium
-                                        ? 'bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20'
-                                        : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                                    ? 'bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20'
+                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
                                     }`}
                             >
                                 <Icon className="w-5 h-5" />
