@@ -20,6 +20,7 @@ export default function RegisterPage() {
     const [step, setStep] = useState<RegisterStep>('form')
     const [resendTimer, setResendTimer] = useState(0)
     const [acceptTerms, setAcceptTerms] = useState(false)
+    const [toastMessage, setToastMessage] = useState('')
 
     // Resend timer countdown
     useEffect(() => {
@@ -54,6 +55,7 @@ export default function RegisterPage() {
         }
 
         setLoading(true)
+        setToastMessage('WhatsApp bağlantısı kontrol ediliyor...')
 
         try {
             const res = await fetch('/api/auth/register', {
@@ -62,6 +64,7 @@ export default function RegisterPage() {
                 body: JSON.stringify({ name, email, password, phoneNumber }),
             })
 
+            setToastMessage('')
             const data = await res.json()
 
             if (!res.ok) {
@@ -167,6 +170,18 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+            {/* Toast Message */}
+            {toastMessage && (
+                <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-pulse">
+                    <div className="bg-green-600/90 backdrop-blur-sm text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span className="font-medium">{toastMessage}</span>
+                    </div>
+                </div>
+            )}
             <div className="w-full max-w-md">
                 <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-white/20">
                     <div className="text-center mb-8">
