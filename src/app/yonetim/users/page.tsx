@@ -40,6 +40,8 @@ interface Pagination {
 export default function AdminUsersPage() {
     const { data: session } = useSession()
     const isAdmin = session?.user?.role === 'ADMIN'
+    // Korunan admin email - sadece kendisi düzenleyebilir
+    const PROTECTED_ADMIN_EMAIL = 'sdat.sahin@gmail.com'
     const [users, setUsers] = useState<User[]>([])
     const [pagination, setPagination] = useState<Pagination | null>(null)
     const [loading, setLoading] = useState(true)
@@ -186,6 +188,11 @@ export default function AdminUsersPage() {
     }
 
     const handleDeleteUser = async (userId: string, email: string) => {
+        // Korunan admin silinemez
+        if (email === PROTECTED_ADMIN_EMAIL) {
+            alert('Bu kullanıcı korumalı admindir ve silinemez!')
+            return
+        }
         if (!confirm(`${email} kullanıcısını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) {
             return
         }
@@ -475,7 +482,7 @@ export default function AdminUsersPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
-                                                {isAdmin ? (
+                                                {isAdmin && user.email !== PROTECTED_ADMIN_EMAIL ? (
                                                     <>
                                                         <button
                                                             onClick={() => openEditModal(user)}
@@ -492,6 +499,8 @@ export default function AdminUsersPage() {
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
                                                     </>
+                                                ) : user.email === PROTECTED_ADMIN_EMAIL ? (
+                                                    <span className="text-xs text-green-400 font-medium">🛡️ Korumalı</span>
                                                 ) : (
                                                     <span className="text-xs text-slate-500 italic">Salt okunur</span>
                                                 )}
