@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
+import SiteTermsToast from '@/components/SiteTermsToast'
 
 type RegisterStep = 'form' | 'verification'
 
@@ -21,6 +22,15 @@ export default function RegisterPage() {
     const [resendTimer, setResendTimer] = useState(0)
     const [acceptTerms, setAcceptTerms] = useState(false)
     const [toastMessage, setToastMessage] = useState('')
+    const [siteTermsAccepted, setSiteTermsAccepted] = useState(false)
+
+    // Check if site terms were already accepted in this session
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const accepted = sessionStorage.getItem('site_terms_accepted')
+            if (accepted) setSiteTermsAccepted(true)
+        }
+    }, [])
 
     // Resend timer countdown
     useEffect(() => {
@@ -305,7 +315,7 @@ export default function RegisterPage() {
 
                             <button
                                 type="submit"
-                                disabled={loading}
+                                disabled={loading || !siteTermsAccepted}
                                 className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-semibold rounded-lg shadow-lg transform transition hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                             >
                                 {loading ? (
@@ -436,6 +446,12 @@ export default function RegisterPage() {
                     )}
                 </div>
             </div>
+
+            {/* Mandatory Site Terms Toast */}
+            <SiteTermsToast
+                onAccept={() => setSiteTermsAccepted(true)}
+                isAccepted={siteTermsAccepted}
+            />
         </div>
     )
 }

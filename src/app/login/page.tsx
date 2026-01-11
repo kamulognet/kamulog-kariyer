@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import SiteTermsToast from '@/components/SiteTermsToast'
 
 type LoginStep = 'credentials' | 'verification' | 'forgot'
 export default function LoginPage() {
@@ -17,6 +18,15 @@ export default function LoginPage() {
     const [step, setStep] = useState<LoginStep>('credentials')
     const [resendTimer, setResendTimer] = useState(0)
     const [toastMessage, setToastMessage] = useState('')
+    const [termsAccepted, setTermsAccepted] = useState(false)
+
+    // Check if terms were already accepted in this session
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const accepted = sessionStorage.getItem('site_terms_accepted')
+            if (accepted) setTermsAccepted(true)
+        }
+    }, [])
 
     // Giriş yapmış kullanıcıları dashboard'a yönlendir
     useEffect(() => {
@@ -225,7 +235,7 @@ export default function LoginPage() {
 
                                 <button
                                     type="submit"
-                                    disabled={loading}
+                                    disabled={loading || !termsAccepted}
                                     className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-semibold rounded-lg shadow-lg transform transition hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                                 >
                                     {loading ? (
@@ -380,6 +390,12 @@ export default function LoginPage() {
                     )}
                 </div>
             </div>
+
+            {/* Mandatory Site Terms Toast */}
+            <SiteTermsToast
+                onAccept={() => setTermsAccepted(true)}
+                isAccepted={termsAccepted}
+            />
         </div>
     )
 }
