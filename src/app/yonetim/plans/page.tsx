@@ -31,7 +31,7 @@ export default function AdminPlansPage() {
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login')
-        } else if (session?.user?.role !== 'ADMIN') {
+        } else if (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MODERATOR') {
             router.push('/panel')
         }
     }, [status, session, router])
@@ -131,7 +131,7 @@ export default function AdminPlansPage() {
         }
     }
 
-    if (session?.user?.role !== 'ADMIN') {
+    if (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MODERATOR') {
         return null
     }
 

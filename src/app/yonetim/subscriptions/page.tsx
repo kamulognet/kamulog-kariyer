@@ -27,13 +27,13 @@ function SubscriptionsContent() {
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login')
-        } else if (session?.user?.role !== 'ADMIN') {
+        } else if (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MODERATOR') {
             router.push('/panel')
         }
     }, [status, session, router])
 
     useEffect(() => {
-        if (session?.user?.role === 'ADMIN') {
+        if (session?.user?.role === 'ADMIN' || session?.user?.role === 'MODERATOR') {
             loadSubscriptions()
         }
     }, [session, filter])
@@ -101,7 +101,7 @@ function SubscriptionsContent() {
         }
     }
 
-    if (session?.user?.role !== 'ADMIN') {
+    if (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MODERATOR') {
         return null
     }
 

@@ -32,7 +32,7 @@ const navItems = [
     { href: '/yonetim/jobs', label: 'İş İlanları', icon: Briefcase, adminOnly: false },
     { href: '/yonetim/danismanlar', label: 'Kariyer Danışmanlığı', icon: Users, adminOnly: false },
     { href: '/yonetim/danismanlar/mesajlar', label: '↳ Danışman Mesajları', icon: MessageCircle, adminOnly: false },
-    { href: '/yonetim/sales', label: 'Satış Kayıtları', icon: ShoppingCart, adminOnly: true },
+    { href: '/yonetim/sales', label: 'Satış Kayıtları', icon: ShoppingCart, adminOnly: false },
     { href: '/yonetim/campaigns', label: 'Kampanyalar', icon: Tag, adminOnly: false },
     { href: '/yonetim/payment-settings', label: 'Ödeme Ayarları', icon: Wallet, adminOnly: true },
     { href: '/yonetim/whatsapp', label: 'WhatsApp Butonu', icon: MessageCircle, adminOnly: true },
@@ -195,8 +195,8 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
 
                     <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 text-xs font-medium rounded-lg border ${isAdmin
-                                ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-400 border-purple-500/30'
-                                : 'bg-gradient-to-r from-green-500/20 to-teal-500/20 text-green-400 border-green-500/30'
+                            ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-400 border-purple-500/30'
+                            : 'bg-gradient-to-r from-green-500/20 to-teal-500/20 text-green-400 border-green-500/30'
                             }`}>
                             {isAdmin ? 'ADMİN' : 'MODERATÖR'}
                         </span>
