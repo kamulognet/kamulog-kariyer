@@ -1,64 +1,46 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { sendPasswordReset } from '@/services/email.service'
-import { generateVerificationCode } from '@/utils/helpers'
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { formatPhoneNumber } from '@/utils/helpers';
+import { sendWhatsAppMessage } from '@/lib/whatsapp';
 
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/auth/forgot-password
+ * Initiates a password reset flow by sending a WhatsApp verification code.
+ */
+export async function POST(req: NextRequest) {
     try {
-        const { email } = await request.json()
-
+        const { email } = await req.json();
         if (!email) {
-            return NextResponse.json(
-                { error: 'Email adresi gereklidir' },
-                { status: 400 }
-            )
+            return NextResponse.json({ error: 'Email required' }, { status: 400 });
         }
 
-        // Find user
-        const user = await prisma.user.findUnique({
-            where: { email }
-        })
-
-        // Security: Always return success even if user not found
+        // Find user by email
+        const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
-            return NextResponse.json({
-                success: true,
-                message: 'Eğer bu email kayıtlıysa, şifre sıfırlama bağlantısı gönderildi'
-            })
+            return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 });
         }
 
-        // Generate reset code
-        const resetCode = generateVerificationCode()
-        const resetExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+        if (!user.phoneNumber) {
+            return NextResponse.json({ error: 'Kullanıcı telefon numarası eksik' }, { status: 400 });
+        }
 
-        // Save code to database
+        // Generate verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        // Store code in DB
         await prisma.user.update({
             where: { id: user.id },
-            data: {
-                verificationCode: resetCode,
-                verificationExpires: resetExpires
-            }
-        })
+            data: { verificationCode, verificationExpires },
+        });
 
-        // Send reset email
-        const emailSent = await sendPasswordReset(email, resetCode)
+        // Send via WhatsApp
+        const msg = `Şifre sıfırlama kodunuz: ${verificationCode}`;
+        await sendWhatsAppMessage(formatPhoneNumber(user.phoneNumber), msg);
 
-        if (!emailSent) {
-            return NextResponse.json(
-                { error: 'Email gönderilemedi. Lütfen tekrar deneyin.' },
-                { status: 500 }
-            )
-        }
-
-        return NextResponse.json({
-            success: true,
-            message: 'Şifre sıfırlama kodu email adresinize gönderildi'
-        })
-    } catch (error) {
-        console.error('Forgot password error:', error)
-        return NextResponse.json(
-            { error: 'Bir hata oluştu' },
-            { status: 500 }
-        )
+        return NextResponse.json({ success: true, message: 'Kod gönderildi' });
+    } catch (error: any) {
+        console.error('Forgot password error:', error);
+        return NextResponse.json({ error: 'Şifre sıfırlama sırasında bir hata oluştu' }, { status: 500 });
     }
 }

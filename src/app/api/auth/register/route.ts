@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { formatPhoneNumber } from '@/utils/helpers'
-import { sendRegistrationVerificationEmail } from '@/lib/email'
+
 import { z } from 'zod'
+import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { verifyReptika } from '@/lib/reptika'
 
 const registerSchema = z.object({
     name: z.string().min(2, 'İsim en az 2 karakter olmalıdır'),
@@ -32,6 +34,15 @@ export async function POST(req: NextRequest) {
 
         const { name, email, password, phoneNumber } = result.data
 
+        // Verify Reptika bot detection
+        const isHuman = await verifyReptika(formatPhoneNumber(phoneNumber))
+        if (!isHuman) {
+            return NextResponse.json(
+                { error: 'Bot tespit edildi. Kayıt yapılamıyor.' },
+                { status: 400 }
+            )
+        }
+
         // Check existing user
         const existingUser = await prisma.user.findUnique({
             where: { email },
@@ -46,30 +57,40 @@ export async function POST(req: NextRequest) {
                 )
             }
 
-            // If user exists but email not verified, update user info and verify
+            // If user exists but email not verified, update and send new code
+            const verificationCode = generateVerificationCode()
+            const verificationExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 dakika
+
             await prisma.user.update({
                 where: { id: existingUser.id },
                 data: {
                     password: await bcrypt.hash(password, 12),
                     name,
                     phoneNumber: formatPhoneNumber(phoneNumber),
-                    emailVerified: new Date(), // Doğrudan doğrulanmış olarak işaretle
-                    verificationCode: null,
-                    verificationExpires: null,
+                    verificationCode,
+                    verificationExpires,
                 }
             })
 
+            // Send verification code via WhatsApp
+            const whatsappMessage = `Kayıt doğrulama kodunuz: ${verificationCode}`
+            await sendWhatsAppMessage(existingUser.phoneNumber || formatPhoneNumber(phoneNumber), whatsappMessage)
+
             return NextResponse.json({
                 success: true,
-                requiresVerification: false,
-                message: 'Kayıt başarılı. Giriş yapabilirsiniz.'
+                requiresVerification: true,
+                message: 'Doğrulama kodu WhatsApp üzerinden gönderildi.'
             })
         }
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12)
 
-        // Create user (email verified immediately - no email verification needed)
+        // Generate verification code for new user
+        const verificationCode = generateVerificationCode()
+        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+
+        // Create user (email not verified, requires WhatsApp verification)
         await prisma.user.create({
             data: {
                 name,
@@ -77,9 +98,9 @@ export async function POST(req: NextRequest) {
                 phoneNumber: formatPhoneNumber(phoneNumber),
                 password: hashedPassword,
                 role: 'USER',
-                emailVerified: new Date(), // Doğrudan doğrulanmış
-                verificationCode: null,
-                verificationExpires: null,
+                emailVerified: null,
+                verificationCode,
+                verificationExpires,
                 subscription: {
                     create: {
                         plan: 'FREE',
@@ -89,10 +110,14 @@ export async function POST(req: NextRequest) {
             },
         })
 
+        // Send verification code via WhatsApp
+        const whatsappMessage = `Kayıt doğrulama kodunuz: ${verificationCode}`
+        await sendWhatsAppMessage(formatPhoneNumber(phoneNumber), whatsappMessage)
+
         return NextResponse.json({
             success: true,
-            requiresVerification: false,
-            message: 'Kayıt başarılı. Giriş yapabilirsiniz.'
+            requiresVerification: true,
+            message: 'Doğrulama kodu WhatsApp üzerinden gönderildi.'
         })
     } catch (error: any) {
         console.error('Register error:', error)
