@@ -183,7 +183,7 @@ export async function PUT(req: NextRequest) {
         if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber
         if (credits !== undefined) updateData.credits = credits
         if (cvChatTokens !== undefined) updateData.cvChatTokens = cvChatTokens
-        if (role && ['USER', 'ADMIN'].includes(role)) updateData.role = role
+        if (role && ['USER', 'MODERATOR', 'ADMIN'].includes(role)) updateData.role = role
 
         const user = await prisma.user.update({
             where: { id: userId },
