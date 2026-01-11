@@ -242,8 +242,7 @@ export async function PUT(req: NextRequest) {
                         userId,
                         plan: 'PREMIUM',
                         status: 'ACTIVE',
-                        startDate: new Date(),
-                        endDate: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000), // 10 yıl
+                        expiresAt: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000), // 10 yıl
                     }
                 })
                 console.log(`[Users API] Auto-created PREMIUM subscription for MODERATOR user: ${userId}`)
@@ -254,7 +253,7 @@ export async function PUT(req: NextRequest) {
                     data: {
                         plan: 'PREMIUM',
                         status: 'ACTIVE',
-                        endDate: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000),
+                        expiresAt: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000),
                     }
                 })
                 console.log(`[Users API] Upgraded subscription to PREMIUM for MODERATOR user: ${userId}`)
