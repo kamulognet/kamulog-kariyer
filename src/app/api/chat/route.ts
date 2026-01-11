@@ -14,26 +14,51 @@ async function getChatSettings() {
         const settings = await prisma.siteSettings.findMany({
             where: {
                 key: {
-                    in: ['cv_chat_token_cost', 'cv_chat_session_limit']
+                    in: ['cv_chat_token_cost', 'cv_chat_session_limit', 'subscription_plans']
                 }
             }
         })
 
         let tokenCost = DEFAULT_CHAT_TOKEN_COST
         let sessionLimit = DEFAULT_SESSION_TOKEN_LIMIT
+        let plans: any[] = []
 
         settings.forEach(s => {
             if (s.key === 'cv_chat_token_cost') {
                 tokenCost = parseInt(s.value, 10) || DEFAULT_CHAT_TOKEN_COST
             } else if (s.key === 'cv_chat_session_limit') {
                 sessionLimit = parseInt(s.value, 10) || DEFAULT_SESSION_TOKEN_LIMIT
+            } else if (s.key === 'subscription_plans') {
+                try {
+                    plans = JSON.parse(s.value)
+                } catch (e) {
+                    plans = []
+                }
             }
         })
 
-        return { tokenCost, sessionLimit }
+        return { tokenCost, sessionLimit, plans }
     } catch (error) {
         console.error('Error fetching chat settings:', error)
-        return { tokenCost: DEFAULT_CHAT_TOKEN_COST, sessionLimit: DEFAULT_SESSION_TOKEN_LIMIT }
+        return { tokenCost: DEFAULT_CHAT_TOKEN_COST, sessionLimit: DEFAULT_SESSION_TOKEN_LIMIT, plans: [] }
+    }
+}
+
+// Kullanıcının sınırsız plana sahip olup olmadığını kontrol et
+async function hasUnlimitedPlan(userId: string, plans: any[]): Promise<boolean> {
+    try {
+        const subscription = await prisma.subscription.findUnique({
+            where: { userId },
+            select: { plan: true, status: true }
+        })
+
+        if (!subscription || subscription.status !== 'ACTIVE') return false
+
+        const userPlan = plans.find(p => p.id === subscription.plan)
+        return userPlan?.isUnlimited === true
+    } catch (error) {
+        console.error('Error checking unlimited plan:', error)
+        return false
     }
 }
 
@@ -51,11 +76,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Messages required' }, { status: 400 })
         }
 
-        // Jeton ayarlarını al
-        const { tokenCost, sessionLimit } = await getChatSettings()
+        // Jeton ayarlarını ve planları al
+        const { tokenCost, sessionLimit, plans } = await getChatSettings()
 
-        // Session bazlı jeton kullanım kontrolü
-        if (sessionId) {
+        // Sınırsız plan kontrolü
+        const isUnlimited = await hasUnlimitedPlan(session.user.id, plans)
+
+        if (isUnlimited) {
+            console.log(`[CV Chat] User ${session.user.id} has UNLIMITED plan - skipping token checks`)
+        }
+
+        // Session bazlı jeton kullanım kontrolü (sınırsız değilse)
+        if (!isUnlimited && sessionId) {
             const chatSession = await prisma.chatSession.findUnique({
                 where: { id: sessionId }
             })
@@ -75,28 +107,32 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Kullanıcı CV Chat jeton kontrolü (ayrı jeton havuzu)
-        const user = await prisma.user.findUnique({
-            where: { id: session.user.id },
-            select: { cvChatTokens: true }
-        })
+        // Kullanıcı CV Chat jeton kontrolü (sınırsız değilse)
+        let updatedUser = { cvChatTokens: 999999 } // Sınırsız için varsayılan
 
-        if (!user || user.cvChatTokens < tokenCost) {
-            return NextResponse.json({
-                error: `Bu mesaj için ${tokenCost} jeton gerekiyor. Mevcut CV sohbet jetonunuz: ${user?.cvChatTokens || 0}`,
-                cvChatTokens: user?.cvChatTokens || 0,
-                required: tokenCost,
-            }, { status: 403 })
+        if (!isUnlimited) {
+            const user = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { cvChatTokens: true }
+            })
+
+            if (!user || user.cvChatTokens < tokenCost) {
+                return NextResponse.json({
+                    error: `Bu mesaj için ${tokenCost} jeton gerekiyor. Mevcut CV sohbet jetonunuz: ${user?.cvChatTokens || 0}`,
+                    cvChatTokens: user?.cvChatTokens || 0,
+                    required: tokenCost,
+                }, { status: 403 })
+            }
+
+            // CV Chat jetonlarını düş
+            updatedUser = await prisma.user.update({
+                where: { id: session.user.id },
+                data: { cvChatTokens: { decrement: tokenCost } },
+                select: { cvChatTokens: true }
+            })
+
+            console.log(`[CV Chat] Deducted ${tokenCost} cvChatTokens from user ${session.user.id}. New balance: ${updatedUser.cvChatTokens}`)
         }
-
-        // CV Chat jetonlarını düş (genel krediler değil)
-        const updatedUser = await prisma.user.update({
-            where: { id: session.user.id },
-            data: { cvChatTokens: { decrement: tokenCost } },
-            select: { cvChatTokens: true }
-        })
-
-        console.log(`[CV Chat] Deducted ${tokenCost} cvChatTokens from user ${session.user.id}. New balance: ${updatedUser.cvChatTokens}`)
 
         // OpenAI chat
         const rawResponse = await generateCVChat(messages as ChatMessage[])
@@ -119,8 +155,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             message: response,
             isFinished,
-            creditsUsed: tokenCost,
-            remainingCredits: updatedUser.cvChatTokens,
+            creditsUsed: isUnlimited ? 0 : tokenCost,
+            remainingCredits: isUnlimited ? -1 : updatedUser.cvChatTokens, // -1 = sınırsız
+            isUnlimited,
         })
     } catch (error: unknown) {
         console.error('Chat error:', error)

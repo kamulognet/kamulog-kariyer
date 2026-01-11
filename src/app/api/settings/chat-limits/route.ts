@@ -18,6 +18,7 @@ export async function GET() {
         let cvApplicationsUsed = 0
         let cvChatTokens = 0 // Kullanıcının mevcut CV chat jetonu
         let planCvChatTokens = 20 // Plan için ayrılan CV chat jetonu
+        let isUnlimited = false // Sınırsız plan mı
 
         if (session?.user?.id) {
             // Kullanıcının bilgilerini al
@@ -49,21 +50,32 @@ export async function GET() {
                 const currentPlan = plans.find((p: any) => p.id === userPlan)
 
                 if (currentPlan) {
-                    sessionLimit = currentPlan.chatLimit || DEFAULT_SESSION_LIMIT
-                    cvApplicationLimit = currentPlan.cvApplicationLimit || 3
-                    planCvChatTokens = currentPlan.cvChatTokens || 20
+                    // Sınırsız plan kontrolü
+                    isUnlimited = currentPlan.isUnlimited === true
+
+                    if (!isUnlimited) {
+                        sessionLimit = currentPlan.chatLimit || DEFAULT_SESSION_LIMIT
+                        cvApplicationLimit = currentPlan.cvApplicationLimit || 3
+                        planCvChatTokens = currentPlan.cvChatTokens || 20
+                    } else {
+                        // Sınırsız plan için tüm limitler -1 (sınırsız)
+                        sessionLimit = -1
+                        cvApplicationLimit = -1
+                        planCvChatTokens = -1
+                    }
                 }
             }
         }
 
         return NextResponse.json({
-            sessionLimit,          // Sohbet başına limit (chatLimit)
+            sessionLimit,          // Sohbet başına limit (chatLimit), -1 = sınırsız
             tokenCost,             // Mesaj başına maliyet
-            cvApplicationLimit,    // CV başvuru limiti
+            cvApplicationLimit,    // CV başvuru limiti, -1 = sınırsız
             cvApplicationsUsed,    // Kullanılan CV başvuru
-            cvApplicationsRemaining: cvApplicationLimit === 0 ? -1 : Math.max(0, cvApplicationLimit - cvApplicationsUsed),
+            cvApplicationsRemaining: cvApplicationLimit === -1 ? -1 : cvApplicationLimit === 0 ? -1 : Math.max(0, cvApplicationLimit - cvApplicationsUsed),
             cvChatTokens,          // Kullanıcının mevcut CV chat jetonu
-            planCvChatTokens       // Plan için ayrılan toplam
+            planCvChatTokens,      // Plan için ayrılan toplam, -1 = sınırsız
+            isUnlimited            // Sınırsız plan mı
         })
     } catch (error) {
         console.error('Get chat limits error:', error)
@@ -74,7 +86,8 @@ export async function GET() {
             cvApplicationsUsed: 0,
             cvApplicationsRemaining: 3,
             cvChatTokens: 0,
-            planCvChatTokens: 20
+            planCvChatTokens: 20,
+            isUnlimited: false
         })
     }
 }

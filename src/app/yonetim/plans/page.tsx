@@ -17,6 +17,7 @@ interface Plan {
     features: string[]
     popular: boolean
     tag: string | null
+    isUnlimited?: boolean    // Sınırsız plan mı (PREMIUM için true)
 }
 
 export default function AdminPlansPage() {
@@ -212,59 +213,78 @@ export default function AdminPlansPage() {
                                             className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm text-slate-400 mb-2 flex items-center gap-2">
-                                            <Coins className="w-4 h-4 text-yellow-400" />
-                                            Jeton Sayısı
+                                    {!plan.isUnlimited && (
+                                        <div>
+                                            <label className="block text-sm text-slate-400 mb-2 flex items-center gap-2">
+                                                <Coins className="w-4 h-4 text-yellow-400" />
+                                                Jeton Sayısı
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={plan.tokens}
+                                                onChange={(e) => updatePlan(planIndex, 'tokens', Number(e.target.value))}
+                                                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* CV Chat Jetonları - Sadece sınırsız olmayan planlar için */}
+                                {!plan.isUnlimited && (
+                                    <div className="mb-6 p-4 bg-blue-500/10 rounded-xl border border-blue-500/30">
+                                        <label className="block text-sm text-blue-400 mb-2 flex items-center gap-2">
+                                            🤖 AI CV Sohbet Jetonları
                                         </label>
                                         <input
                                             type="number"
-                                            value={plan.tokens}
-                                            onChange={(e) => updatePlan(planIndex, 'tokens', Number(e.target.value))}
-                                            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                                            value={plan.cvChatTokens || 0}
+                                            onChange={(e) => updatePlan(planIndex, 'cvChatTokens', Number(e.target.value))}
+                                            className="w-full px-4 py-2 bg-slate-700 border border-blue-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
+                                        <p className="text-xs text-blue-400/70 mt-1">Bu plan için yüklenen AI CV sohbet jetonu (genel jetonlardan bağımsız)</p>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* CV Chat Jetonları */}
-                                <div className="mb-6 p-4 bg-blue-500/10 rounded-xl border border-blue-500/30">
-                                    <label className="block text-sm text-blue-400 mb-2 flex items-center gap-2">
-                                        🤖 AI CV Sohbet Jetonları
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={plan.cvChatTokens || 0}
-                                        onChange={(e) => updatePlan(planIndex, 'cvChatTokens', Number(e.target.value))}
-                                        className="w-full px-4 py-2 bg-slate-700 border border-blue-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                    <p className="text-xs text-blue-400/70 mt-1">Bu plan için yüklenen AI CV sohbet jetonu (genel jetonlardan bağımsız)</p>
-                                </div>
-
-                                {/* Limitler */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-slate-700/30 rounded-xl border border-slate-600">
-                                    <div>
-                                        <label className="block text-sm text-slate-400 mb-2">🗨️ Sohbet Jeton Limiti</label>
-                                        <input
-                                            type="number"
-                                            value={plan.chatLimit || 0}
-                                            onChange={(e) => updatePlan(planIndex, 'chatLimit', Number(e.target.value))}
-                                            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                        <p className="text-xs text-slate-500 mt-1">Sohbet başına max jeton (0 = sınırsız)</p>
+                                {/* Limitler - Sadece sınırsız olmayan planlar için */}
+                                {!plan.isUnlimited && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-slate-700/30 rounded-xl border border-slate-600">
+                                        <div>
+                                            <label className="block text-sm text-slate-400 mb-2">🗨️ Sohbet Jeton Limiti</label>
+                                            <input
+                                                type="number"
+                                                value={plan.chatLimit || 0}
+                                                onChange={(e) => updatePlan(planIndex, 'chatLimit', Number(e.target.value))}
+                                                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <p className="text-xs text-slate-500 mt-1">Sohbet başına max jeton (0 = sınırsız)</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm text-slate-400 mb-2">📝 CV Başvuru Limiti</label>
+                                            <input
+                                                type="number"
+                                                value={plan.cvApplicationLimit || 0}
+                                                onChange={(e) => updatePlan(planIndex, 'cvApplicationLimit', Number(e.target.value))}
+                                                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                            />
+                                            <p className="text-xs text-slate-500 mt-1">Toplam başvuru sayısı (0 = sınırsız)</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm text-slate-400 mb-2">📝 CV Başvuru Limiti</label>
-                                        <input
-                                            type="number"
-                                            value={plan.cvApplicationLimit || 0}
-                                            onChange={(e) => updatePlan(planIndex, 'cvApplicationLimit', Number(e.target.value))}
-                                            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                                        />
-                                        <p className="text-xs text-slate-500 mt-1">Toplam başvuru sayısı (0 = sınırsız)</p>
-                                    </div>
-                                </div>
+                                )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                {/* Sınırsız Plan Bildirimi */}
+                                {plan.isUnlimited && (
+                                    <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-xl border border-purple-500/30">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-3xl">♾️</span>
+                                            <div>
+                                                <p className="text-white font-semibold">Sınırsız Plan</p>
+                                                <p className="text-purple-300 text-sm">Bu plan tüm özellikleri sınırsız sunar: CV oluşturma, CV eşleştirme, AI iş arama, sohbet jetonları</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                                     <div>
                                         <label className="block text-sm text-slate-400 mb-2">Etiket (Tag)</label>
                                         <input
@@ -282,7 +302,16 @@ export default function AdminPlansPage() {
                                             onChange={(e) => updatePlan(planIndex, 'popular', e.target.checked)}
                                             className="w-5 h-5 accent-purple-500"
                                         />
-                                        <label className="text-slate-300">Popüler (Öne Çıkar)</label>
+                                        <label className="text-slate-300">Popüler</label>
+                                    </div>
+                                    <div className="flex items-center gap-3 pt-6 col-span-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={plan.isUnlimited || false}
+                                            onChange={(e) => updatePlan(planIndex, 'isUnlimited', e.target.checked)}
+                                            className="w-5 h-5 accent-green-500"
+                                        />
+                                        <label className="text-green-400 font-medium">♾️ SINIRSIZ PLAN (Tüm özellikler sınırsız)</label>
                                     </div>
                                 </div>
 
