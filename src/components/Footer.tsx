@@ -102,7 +102,7 @@ export default function Footer() {
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/hakkimizda" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                <Link href="/hakkimizda" target="_blank" rel="noopener" className="text-slate-400 hover:text-purple-400 text-sm transition">
                                     Hakkımızda
                                 </Link>
                             </li>
@@ -114,32 +114,32 @@ export default function Footer() {
                         <h4 className="text-white font-semibold mb-4">Yasal Bilgiler</h4>
                         <ul className="space-y-2">
                             <li>
-                                <Link href="/gizlilik" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                <Link href="/gizlilik" target="_blank" rel="noopener" className="text-slate-400 hover:text-purple-400 text-sm transition">
                                     Gizlilik Politikası
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/kvkk" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                <Link href="/kvkk" target="_blank" rel="noopener" className="text-slate-400 hover:text-purple-400 text-sm transition">
                                     KVKK Aydınlatma Metni
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/kullanim-kosullari" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                <Link href="/kullanim-kosullari" target="_blank" rel="noopener" className="text-slate-400 hover:text-purple-400 text-sm transition">
                                     Kullanım Koşulları
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/cerez-politikasi" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                <Link href="/cerez-politikasi" target="_blank" rel="noopener" className="text-slate-400 hover:text-purple-400 text-sm transition">
                                     Çerez Politikası
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/mesafeli-satis" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                <Link href="/mesafeli-satis" target="_blank" rel="noopener" className="text-slate-400 hover:text-purple-400 text-sm transition">
                                     Mesafeli Satış Sözleşmesi
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/iptal-iade" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                <Link href="/iptal-iade" target="_blank" rel="noopener" className="text-slate-400 hover:text-purple-400 text-sm transition">
                                     İptal ve İade Koşulları
                                 </Link>
                             </li>
