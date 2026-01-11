@@ -123,26 +123,64 @@ export async function sendMessage(phoneNumber: string, message: string): Promise
 }
 
 /**
- * Disconnect WhatsApp
+ * Disconnect WhatsApp (without logout - preserves session for reconnection)
  */
 export async function disconnect(): Promise<void> {
     if (sock) {
-        await sock.logout();
+        try {
+            sock.end(undefined);
+        } catch (e) {
+            console.log('[WhatsApp] Error while closing socket:', e);
+        }
         sock = null;
         connectionStatus = 'disconnected';
         qrCode = null;
-        console.log('[WhatsApp] Disconnected');
+        console.log('[WhatsApp] Disconnected (session preserved)');
     }
 }
 
 /**
- * Clear session and disconnect
+ * Force reconnection - always creates new connection
+ */
+export async function forceReconnect(): Promise<void> {
+    console.log('[WhatsApp] Force reconnecting...');
+
+    // Close existing socket if any
+    if (sock) {
+        try {
+            sock.end(undefined);
+        } catch (e) {
+            console.log('[WhatsApp] Error closing existing socket:', e);
+        }
+        sock = null;
+    }
+
+    connectionStatus = 'disconnected';
+    qrCode = null;
+
+    // Reinitialize
+    await initWhatsApp();
+}
+
+/**
+ * Full logout and clear session
  */
 export async function clearSession(): Promise<void> {
-    await disconnect();
+    if (sock) {
+        try {
+            await sock.logout();
+        } catch (e) {
+            console.log('[WhatsApp] Error during logout:', e);
+        }
+        sock = null;
+    }
+
+    connectionStatus = 'disconnected';
+    qrCode = null;
 
     if (fs.existsSync(AUTH_DIR)) {
         fs.rmSync(AUTH_DIR, { recursive: true, force: true });
         console.log('[WhatsApp] Session cleared');
     }
 }
+

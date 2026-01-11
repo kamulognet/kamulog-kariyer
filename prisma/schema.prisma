@@ -269,3 +269,21 @@ model Media {
   @@index([categoryId])
   @@index([createdAt])
 }
+
+// WhatsApp mesaj logları - Gönderilen tüm mesajları takip eder
+model WhatsAppLog {
+  id           String   @id @default(cuid())
+  phoneNumber  String // Gönderilen telefon numarası
+  message      String // Gönderilen mesaj içeriği
+  messageType  String   @default("VERIFICATION") // VERIFICATION, PAYMENT, NOTIFICATION
+  status       String   @default("SENT") // SENT, FAILED, PENDING
+  userId       String? // İlişkilendirilmiş kullanıcı ID'si (varsa)
+  userEmail    String? // Kullanıcı e-postası (log için)
+  errorMessage String? // Hata mesajı (başarısızsa)
+  createdAt    DateTime @default(now())
+
+  @@index([phoneNumber])
+  @@index([messageType])
+  @@index([status])
+  @@index([createdAt])
+}

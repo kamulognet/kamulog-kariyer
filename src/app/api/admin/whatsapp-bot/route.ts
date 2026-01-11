@@ -5,7 +5,7 @@ import {
     getQRCode,
     getConnectionStatus,
     isConnected,
-    initWhatsApp,
+    forceReconnect,
     disconnect,
     clearSession
 } from '@/lib/whatsapp';
@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
 
         switch (action) {
             case 'init':
-                await initWhatsApp();
+                // Use forceReconnect to ensure fresh connection
+                await forceReconnect();
                 return NextResponse.json({
                     success: true,
                     message: 'WhatsApp bağlantısı başlatıldı. QR kodu için sayfayı yenileyin.'
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
                 await disconnect();
                 return NextResponse.json({
                     success: true,
-                    message: 'WhatsApp bağlantısı kesildi.'
+                    message: 'WhatsApp bağlantısı kesildi. Yeniden bağlanmak için "Bağlantı Başlat" butonuna basın.'
                 });
 
             case 'clear':
@@ -85,3 +86,4 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
     }
 }
+

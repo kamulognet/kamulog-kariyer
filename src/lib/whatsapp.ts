@@ -1,4 +1,5 @@
 import { sendMessage, isConnected, initWhatsApp, getConnectionStatus } from './whatsapp-bot';
+import { prisma } from '@/lib/prisma';
 
 // Auto-initialize WhatsApp on module load
 let initPromise: Promise<void> | null = null;
@@ -42,15 +43,42 @@ async function waitForConnection(maxWaitMs: number = 15000): Promise<boolean> {
 }
 
 /**
+ * Log WhatsApp message to database
+ */
+async function logWhatsAppMessage(
+    phoneNumber: string,
+    message: string,
+    status: 'SENT' | 'FAILED',
+    errorMessage?: string,
+    userEmail?: string
+): Promise<void> {
+    try {
+        await prisma.whatsAppLog.create({
+            data: {
+                phoneNumber,
+                message,
+                messageType: 'VERIFICATION',
+                status,
+                userEmail,
+                errorMessage,
+            }
+        });
+    } catch (error) {
+        console.error('[WhatsApp] Failed to log message:', error);
+    }
+}
+
+/**
  * Sends a WhatsApp message using the bot.
  * Waits for connection if bot is still connecting.
- * Returns status indicating if message was sent.
+ * Logs message to database.
  * 
  * @param to - Phone number in format +90XXXXXXXXXX
  * @param message - Message text to send
- * @returns { sent: boolean, reason?: string }
+ * @param userEmail - Optional user email for logging
+ * @returns true if sent successfully, false otherwise
  */
-export async function sendWhatsAppMessage(to: string, message: string): Promise<boolean> {
+export async function sendWhatsAppMessage(to: string, message: string, userEmail?: string): Promise<boolean> {
     // Ensure bot is initialized
     await ensureInitialized();
 
@@ -60,6 +88,7 @@ export async function sendWhatsAppMessage(to: string, message: string): Promise<
     if (!connected) {
         console.log('[WhatsApp] Bot not connected after waiting. Message not sent.');
         console.log(`[WhatsApp] Would send to ${to}: ${message}`);
+        await logWhatsAppMessage(to, message, 'FAILED', 'Bot not connected', userEmail);
         return false;
     }
 
@@ -68,8 +97,10 @@ export async function sendWhatsAppMessage(to: string, message: string): Promise<
 
     if (result) {
         console.log(`[WhatsApp] Message sent successfully to ${to}`);
+        await logWhatsAppMessage(to, message, 'SENT', undefined, userEmail);
     } else {
         console.error(`[WhatsApp] Failed to send message to ${to}`);
+        await logWhatsAppMessage(to, message, 'FAILED', 'Send failed', userEmail);
     }
 
     return result;
@@ -83,5 +114,4 @@ export function isBotReady(): boolean {
 }
 
 // Re-export useful functions for admin management
-export { getQRCode, getConnectionStatus, isConnected, initWhatsApp, disconnect, clearSession } from './whatsapp-bot';
-
+export { getQRCode, getConnectionStatus, isConnected, initWhatsApp, disconnect, clearSession, forceReconnect } from './whatsapp-bot';
