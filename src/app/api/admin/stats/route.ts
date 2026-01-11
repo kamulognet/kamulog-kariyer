@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 // Admin middleware
 async function checkAdmin() {
     const session = await getServerSession(authOptions)
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR')) {
         return null
     }
     return session

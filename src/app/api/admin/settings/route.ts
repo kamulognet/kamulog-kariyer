@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Admin kontrolü
-        if (session.user.role !== 'ADMIN') {
+        if (session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR') {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Admin kontrolü
-        if (session.user.role !== 'ADMIN') {
+        if (session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR') {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
