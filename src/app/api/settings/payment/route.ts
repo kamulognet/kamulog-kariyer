@@ -16,18 +16,35 @@ const defaultPaymentInfo = {
 // GET - Ödeme bilgilerini getir (public)
 export async function GET() {
     try {
-        const setting = await prisma.siteSettings.findUnique({
+        // Fetch payment info
+        const paymentSetting = await prisma.siteSettings.findUnique({
             where: { key: 'payment_info' }
         })
 
-        if (setting?.value) {
-            const paymentInfo = typeof setting.value === 'string'
-                ? JSON.parse(setting.value)
-                : setting.value
-            return NextResponse.json(paymentInfo)
+        let paymentInfo = { ...defaultPaymentInfo }
+
+        if (paymentSetting?.value) {
+            const storedInfo = typeof paymentSetting.value === 'string'
+                ? JSON.parse(paymentSetting.value)
+                : paymentSetting.value
+            paymentInfo = { ...paymentInfo, ...storedInfo }
         }
 
-        return NextResponse.json(defaultPaymentInfo)
+        // Fetch legal contracts from admin-managed legal pages
+        const [salesAgreementSetting, refundPolicySetting] = await Promise.all([
+            prisma.siteSettings.findUnique({ where: { key: 'legal_mesafeli-satis' } }),
+            prisma.siteSettings.findUnique({ where: { key: 'legal_iptal-iade' } })
+        ])
+
+        // Use admin-managed legal pages if available
+        if (salesAgreementSetting?.value) {
+            paymentInfo.salesAgreement = salesAgreementSetting.value
+        }
+        if (refundPolicySetting?.value) {
+            paymentInfo.refundPolicy = refundPolicySetting.value
+        }
+
+        return NextResponse.json(paymentInfo)
     } catch (error) {
         console.error('Error fetching payment info:', error)
         return NextResponse.json(defaultPaymentInfo)
