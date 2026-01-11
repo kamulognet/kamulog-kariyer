@@ -53,23 +53,19 @@ export default function LoginPage() {
         setLoading(true)
 
         try {
-            // Önce email/şifre doğrula ve kod gönder
-            const res = await fetch('/api/auth/send-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+            // Doğrudan giriş yap (email doğrulama bypass)
+            const result = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
             })
 
-            const data = await res.json()
-
-            if (!res.ok) {
-                setError(data.error || 'Giriş bilgileri hatalı')
-                return
+            if (result?.error) {
+                setError('Email veya şifre hatalı')
+            } else {
+                router.push('/panel')
+                router.refresh()
             }
-
-            // Kod gönderildi, doğrulama adımına geç
-            setStep('verification')
-            setResendTimer(60)
         } catch (err) {
             setError('Bir hata oluştu')
         } finally {

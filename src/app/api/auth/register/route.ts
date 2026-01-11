@@ -46,39 +46,30 @@ export async function POST(req: NextRequest) {
                 )
             }
 
-            // If user exists but email not verified, update and send new code
-            const verificationCode = generateVerificationCode()
-            const verificationExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 dakika
-
+            // If user exists but email not verified, update user info and verify
             await prisma.user.update({
                 where: { id: existingUser.id },
                 data: {
                     password: await bcrypt.hash(password, 12),
                     name,
                     phoneNumber: formatPhoneNumber(phoneNumber),
-                    verificationCode,
-                    verificationExpires,
+                    emailVerified: new Date(), // Doğrudan doğrulanmış olarak işaretle
+                    verificationCode: null,
+                    verificationExpires: null,
                 }
             })
 
-            // Send verification email
-            await sendRegistrationVerificationEmail(email, verificationCode, name)
-
             return NextResponse.json({
                 success: true,
-                requiresVerification: true,
-                message: 'Doğrulama kodu e-posta adresinize gönderildi.'
+                requiresVerification: false,
+                message: 'Kayıt başarılı. Giriş yapabilirsiniz.'
             })
         }
 
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12)
 
-        // Generate verification code
-        const verificationCode = generateVerificationCode()
-        const verificationExpires = new Date(Date.now() + 10 * 60 * 1000) // 10 dakika
-
-        // Create user (email NOT verified, requires verification)
+        // Create user (email verified immediately - no email verification needed)
         await prisma.user.create({
             data: {
                 name,
@@ -86,9 +77,9 @@ export async function POST(req: NextRequest) {
                 phoneNumber: formatPhoneNumber(phoneNumber),
                 password: hashedPassword,
                 role: 'USER',
-                emailVerified: null, // Email doğrulanmamış
-                verificationCode,
-                verificationExpires,
+                emailVerified: new Date(), // Doğrudan doğrulanmış
+                verificationCode: null,
+                verificationExpires: null,
                 subscription: {
                     create: {
                         plan: 'FREE',
@@ -98,13 +89,10 @@ export async function POST(req: NextRequest) {
             },
         })
 
-        // Send verification email
-        await sendRegistrationVerificationEmail(email, verificationCode, name)
-
         return NextResponse.json({
             success: true,
-            requiresVerification: true,
-            message: 'Doğrulama kodu e-posta adresinize gönderildi.'
+            requiresVerification: false,
+            message: 'Kayıt başarılı. Giriş yapabilirsiniz.'
         })
     } catch (error: any) {
         console.error('Register error:', error)

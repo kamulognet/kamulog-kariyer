@@ -320,7 +320,7 @@ export default function PurchasePage() {
         if (!paymentInfo?.whatsappNumber || !orderDetails) return
 
         const message = encodeURIComponent(
-            `🛒 *YENİ SİPARİŞ*
+            `🛒 *YENİ SİPARİŞ - kamulogkariyer.com*
 
 📋 *Sipariş No:* ${orderDetails.orderCode}
 📦 *Plan:* ${orderDetails.plan}
@@ -328,6 +328,8 @@ export default function PurchasePage() {
 
 👤 *Müşteri:* ${orderDetails.user.name}
 📧 *E-posta:* ${orderDetails.user.email}
+
+🌐 *Site:* kamulogkariyer.com
 
 Ödeme yaptım, lütfen aboneliğimi aktifleştirin.`
         )
