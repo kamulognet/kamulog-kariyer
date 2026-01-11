@@ -67,13 +67,18 @@ export default function Footer() {
                         </p>
                     </div>
 
-                    {/* Quick Links */}
+                    {/* Site Haritası */}
                     <div>
-                        <h4 className="text-white font-semibold mb-4">Hızlı Linkler</h4>
+                        <h4 className="text-white font-semibold mb-4">Site Haritası</h4>
                         <ul className="space-y-2">
                             <li>
                                 <Link href="/" className="text-slate-400 hover:text-purple-400 text-sm transition">
                                     Anasayfa
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/panel" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                    Kullanıcı Paneli
                                 </Link>
                             </li>
                             <li>
@@ -91,10 +96,52 @@ export default function Footer() {
                                     Abonelik Planları
                                 </Link>
                             </li>
+                            <li>
+                                <Link href="/panel/danismanlik" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                    Kariyer Danışmanlığı
+                                </Link>
+                            </li>
                         </ul>
                     </div>
 
-                    {/* Contact */}
+                    {/* Yasal Sayfalar */}
+                    <div>
+                        <h4 className="text-white font-semibold mb-4">Yasal Bilgiler</h4>
+                        <ul className="space-y-2">
+                            <li>
+                                <Link href="/gizlilik" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                    Gizlilik Politikası
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/kvkk" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                    KVKK Aydınlatma Metni
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/kullanim-kosullari" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                    Kullanım Koşulları
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/cerez-politikasi" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                    Çerez Politikası
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/mesafeli-satis" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                    Mesafeli Satış Sözleşmesi
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/iptal-iade" className="text-slate-400 hover:text-purple-400 text-sm transition">
+                                    İptal ve İade Koşulları
+                                </Link>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* İletişim */}
                     <div>
                         <h4 className="text-white font-semibold mb-4">İletişim</h4>
                         <ul className="space-y-3">
@@ -115,6 +162,14 @@ export default function Footer() {
                                     <Mail className="w-4 h-4 flex-shrink-0 text-purple-400" />
                                     <a href={`mailto:${content.email}`} className="hover:text-white transition">{content.email}</a>
                                 </li>
+                            )}
+                            {!content?.address && !content?.phone && !content?.email && (
+                                <>
+                                    <li className="flex items-center gap-2 text-slate-400 text-sm">
+                                        <Mail className="w-4 h-4 flex-shrink-0 text-purple-400" />
+                                        <a href="mailto:destek@kariyerkamulog.com" className="hover:text-white transition">destek@kariyerkamulog.com</a>
+                                    </li>
+                                </>
                             )}
                         </ul>
                     </div>
