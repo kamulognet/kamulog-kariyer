@@ -38,7 +38,7 @@ async function hasUnlimitedPlan(userId: string): Promise<boolean> {
 
         if (planSetting?.value) {
             const plans = JSON.parse(planSetting.value)
-            const userPlan = plans.find((p: any) => p.name === subscription.plan)
+            const userPlan = plans.find((p: any) => p.id === subscription.plan)
             return userPlan?.isUnlimited === true
         }
         return false
