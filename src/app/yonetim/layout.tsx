@@ -20,7 +20,8 @@ import {
     Tag,
     Image,
     Menu,
-    X
+    X,
+    Smartphone
 } from 'lucide-react'
 
 const navItems = [
@@ -35,6 +36,7 @@ const navItems = [
     { href: '/yonetim/campaigns', label: 'Kampanyalar', icon: Tag },
     { href: '/yonetim/payment-settings', label: 'Ödeme Ayarları', icon: Wallet },
     { href: '/yonetim/whatsapp', label: 'WhatsApp Butonu', icon: MessageCircle },
+    { href: '/yonetim/whatsapp-bot', label: 'WhatsApp Bot', icon: Smartphone },
     { href: '/yonetim/medya', label: 'Medya', icon: Image },
     { href: '/yonetim/yasal-sayfalar', label: 'Yasal Sayfalar', icon: FileText },
     { href: '/yonetim/logs', label: 'Sistem Logları', icon: FileText },
