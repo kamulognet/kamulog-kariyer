@@ -152,7 +152,7 @@ model ChatSession {
 
 model JobListing {
   id             String       @id @default(cuid())
-  code           String       @unique // Benzersiz ilan kodu: JOB-XXXXXX
+  code           String?      @unique // Benzersiz ilan kodu: JOB-XXXXXX (mevcut ilanlar için null olabilir)
   title          String
   company        String
   location       String?

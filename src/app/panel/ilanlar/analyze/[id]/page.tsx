@@ -16,7 +16,7 @@ interface CV {
 
 interface JobListing {
     id: string
-    code: string
+    code?: string | null
     title: string
     company: string
     description: string
@@ -258,12 +258,12 @@ export default function JobAnalyzePage() {
                             {/* Kariyer Danışmanlığı Promo */}
                             <ConsultantPromoCard
                                 className="mt-4"
-                                jobInfo={{
+                                jobInfo={job.code ? {
                                     code: job.code,
                                     title: job.title,
                                     company: job.company,
                                     description: job.description
-                                }}
+                                } : undefined}
                             />
 
                             {/* Başvuru Butonu - Her zaman göster */}
