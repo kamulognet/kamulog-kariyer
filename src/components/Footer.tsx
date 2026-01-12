@@ -133,16 +133,6 @@ export default function Footer() {
                                     Çerez Politikası
                                 </Link>
                             </li>
-                            <li>
-                                <Link href="/mesafeli-satis" target="_blank" rel="noopener" className="text-slate-400 hover:text-purple-400 text-sm transition">
-                                    Mesafeli Satış Sözleşmesi
-                                </Link>
-                            </li>
-                            <li>
-                                <Link href="/iptal-iade" target="_blank" rel="noopener" className="text-slate-400 hover:text-purple-400 text-sm transition">
-                                    İptal ve İade Koşulları
-                                </Link>
-                            </li>
                         </ul>
                     </div>
 
@@ -189,6 +179,6 @@ export default function Footer() {
                     </div>
                 </div>
             </div>
-        </footer>
+        </footer >
     )
 }

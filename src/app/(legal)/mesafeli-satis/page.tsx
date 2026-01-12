@@ -41,7 +41,7 @@ export default async function MesafeliSatisPage() {
             <h1 className="text-3xl font-bold text-white mb-8">Mesafeli Satış Sözleşmesi</h1>
 
             <div className="prose prose-invert prose-slate max-w-none space-y-6">
-                {customContent ? (
+                {customContent && customContent.trim() ? (
                     <div
                         className="text-slate-300 leading-relaxed whitespace-pre-wrap"
                         dangerouslySetInnerHTML={{ __html: customContent.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>').replace(/## (.*?)(\n|$)/g, '<h2 class="text-xl font-semibold text-purple-400 mb-4 mt-6">$1</h2>').replace(/# (.*?)(\n|$)/g, '') }}
