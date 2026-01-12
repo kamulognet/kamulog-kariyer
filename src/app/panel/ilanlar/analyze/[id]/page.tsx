@@ -264,6 +264,14 @@ export default function JobAnalyzePage() {
                                     company: job.company,
                                     description: job.description
                                 }}
+                                cvInfo={selectedCvId ? {
+                                    id: selectedCvId,
+                                    title: cvs.find(cv => cv.id === selectedCvId)?.title || 'CV'
+                                } : undefined}
+                                analysisResult={result ? {
+                                    score: result.score,
+                                    feedback: result.feedback
+                                } : undefined}
                             />
 
                             {/* Başvuru Butonu - Her zaman göster */}

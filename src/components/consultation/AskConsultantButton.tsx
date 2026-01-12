@@ -14,6 +14,14 @@ interface AskConsultantButtonProps {
         company: string
         description?: string
     }
+    cvInfo?: {
+        id: string
+        title: string
+    }
+    analysisResult?: {
+        score: number
+        feedback: string
+    }
 }
 
 /**
@@ -23,7 +31,9 @@ interface AskConsultantButtonProps {
 export default function AskConsultantButton({
     className = '',
     context = 'general',
-    jobInfo
+    jobInfo,
+    cvInfo,
+    analysisResult
 }: AskConsultantButtonProps) {
     const { data: session } = useSession()
     const [isPremium, setIsPremium] = useState(false)
@@ -52,18 +62,31 @@ export default function AskConsultantButton({
         checkPremium()
     }, [session])
 
-    // İş bilgisi içeren URL oluştur
+    // İş bilgisi, CV ve analiz sonucu içeren URL oluştur
     const getConsultantUrl = () => {
+        const params = new URLSearchParams()
+
         if (jobInfo) {
-            const params = new URLSearchParams({
-                jobCode: jobInfo.code,
-                jobTitle: jobInfo.title,
-                jobCompany: jobInfo.company,
-                ...(jobInfo.description && { jobDesc: jobInfo.description.substring(0, 200) })
-            })
-            return `/panel/danismanlik?${params.toString()}`
+            params.set('jobCode', jobInfo.code)
+            params.set('jobTitle', jobInfo.title)
+            params.set('jobCompany', jobInfo.company)
+            if (jobInfo.description) {
+                params.set('jobDesc', jobInfo.description.substring(0, 200))
+            }
         }
-        return '/panel/danismanlik'
+
+        if (cvInfo) {
+            params.set('cvId', cvInfo.id)
+            params.set('cvTitle', cvInfo.title)
+        }
+
+        if (analysisResult) {
+            params.set('analysisScore', analysisResult.score.toString())
+            params.set('analysisFeedback', analysisResult.feedback.substring(0, 500))
+        }
+
+        const queryString = params.toString()
+        return queryString ? `/panel/danismanlik?${queryString}` : '/panel/danismanlik'
     }
 
     if (loading) {
@@ -109,12 +132,20 @@ interface ConsultantPromoCardProps {
         company: string
         description?: string
     }
+    cvInfo?: {
+        id: string
+        title: string
+    }
+    analysisResult?: {
+        score: number
+        feedback: string
+    }
 }
 
 /**
  * İş analizi sonucu altında gösterilen danışman kartı
  */
-export function ConsultantPromoCard({ className = '', jobInfo }: ConsultantPromoCardProps) {
+export function ConsultantPromoCard({ className = '', jobInfo, cvInfo, analysisResult }: ConsultantPromoCardProps) {
     const { data: session } = useSession()
     const [isPremium, setIsPremium] = useState(false)
 
@@ -147,13 +178,14 @@ export function ConsultantPromoCard({ className = '', jobInfo }: ConsultantPromo
                     <h4 className="text-white font-medium mb-1">Bu İlan Hakkında Danışmanlık Alın</h4>
                     <p className="text-sm text-slate-400 mb-3">
                         {isPremium
-                            ? 'Kariyer danışmanlarımızla bu pozisyon hakkında görüşün, başvuru stratejisi belirleyin.'
+                            ? 'Kariyer danışmanlarımızla bu pozisyon ve CV analiziniz hakkında görüşün.'
                             : 'Premium üyelere özel kariyer danışmanlığı hizmetimizden yararlanın.'
                         }
                     </p>
-                    <AskConsultantButton jobInfo={jobInfo} />
+                    <AskConsultantButton jobInfo={jobInfo} cvInfo={cvInfo} analysisResult={analysisResult} />
                 </div>
             </div>
         </div>
     )
 }
+

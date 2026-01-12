@@ -142,40 +142,66 @@ function KariyerDanismanligiContent() {
             if (res.ok && data.room) {
                 setSelectedRoom(data.room)
 
-                // URL'den iş ilanı bilgilerini doğrudan oku (state'e güvenmek yerine)
+                // URL'den tüm bilgileri doğrudan oku
                 const jobCode = searchParams.get('jobCode')
                 const jobTitle = searchParams.get('jobTitle')
                 const jobCompany = searchParams.get('jobCompany')
                 const jobDesc = searchParams.get('jobDesc')
+                const cvTitle = searchParams.get('cvTitle')
+                const analysisScore = searchParams.get('analysisScore')
+                const analysisFeedback = searchParams.get('analysisFeedback')
 
-                // Eğer URL'de iş ilanı bilgisi varsa, otomatik mesaj gönder
+                // Eğer URL'de iş ilanı bilgisi varsa, kapsamlı mesaj gönder
                 if (jobCode && jobTitle && jobCompany) {
-                    const jobInfoMessage = `📋 **İş İlanı Hakkında Danışmanlık İstiyorum**
+                    let message = `📋 **İş İlanı Analizi ve Danışmanlık Talebi**
 
 🏷️ İlan Kodu: ${jobCode}
 📌 Pozisyon: ${jobTitle}
-🏢 Şirket: ${jobCompany}${jobDesc ? `
-📝 Açıklama: ${jobDesc}` : ''}
+🏢 Şirket: ${jobCompany}`
 
-Bu ilan hakkında bilgi almak istiyorum.`
+                    if (jobDesc) {
+                        message += `
+📝 İlan Özeti: ${jobDesc}`
+                    }
 
-                    // İş bilgisini mesaj olarak gönder
+                    // CV bilgisi varsa ekle
+                    if (cvTitle) {
+                        message += `
+
+📄 **Başvuru CV'si:** ${cvTitle}`
+                    }
+
+                    // Analiz sonucu varsa ekle
+                    if (analysisScore && analysisFeedback) {
+                        message += `
+
+📊 **Uyumluluk Analizi Sonucu**
+Puan: ${analysisScore}/100
+
+💡 **Yapay Zeka Değerlendirmesi:**
+${decodeURIComponent(analysisFeedback)}`
+                    }
+
+                    message += `
+
+Bu ilan ve CV uyumluluğum hakkında danışmanlık almak istiyorum.`
+
+                    // Mesajı gönder
                     try {
                         const sendRes = await fetch('/api/chat/consultant', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ roomId: data.room.id, content: jobInfoMessage })
+                            body: JSON.stringify({ roomId: data.room.id, content: message })
                         })
                         if (sendRes.ok) {
-                            console.log('Job info message sent successfully')
-                            // linkedJobInfo'yu temizle
+                            console.log('Analysis message sent successfully')
                             setLinkedJobInfo(null)
                         } else {
                             const errData = await sendRes.json()
-                            console.error('Job info send failed:', errData.error)
+                            console.error('Message send failed:', errData.error)
                         }
                     } catch (e) {
-                        console.error('Job info message send error:', e)
+                        console.error('Message send error:', e)
                     }
                 }
 
