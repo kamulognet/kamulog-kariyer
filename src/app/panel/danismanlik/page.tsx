@@ -14,7 +14,10 @@ import {
     Phone,
     ArrowLeft,
     Check,
-    CheckCheck
+    CheckCheck,
+    X,
+    Star,
+    LogOut
 } from 'lucide-react'
 
 interface Consultant {
@@ -31,6 +34,7 @@ interface ChatRoom {
     lastMessage: ChatMessage | null
     unreadCount: number
     updatedAt: string
+    status?: string
 }
 
 interface ChatMessage {
@@ -54,6 +58,11 @@ export default function KariyerDanismanligiPage() {
     const [newMessage, setNewMessage] = useState('')
     const [sending, setSending] = useState(false)
     const [loadingMessages, setLoadingMessages] = useState(false)
+    const [showRatingModal, setShowRatingModal] = useState(false)
+    const [rating, setRating] = useState(0)
+    const [ratingComment, setRatingComment] = useState('')
+    const [submittingRating, setSubmittingRating] = useState(false)
+    const [closingSession, setClosingSession] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -200,6 +209,51 @@ export default function KariyerDanismanligiPage() {
         return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
     }
 
+    // Close session
+    const closeSession = async () => {
+        if (!selectedRoom || closingSession) return
+        setClosingSession(true)
+        try {
+            const res = await fetch('/api/chat/consultant', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: selectedRoom.id, action: 'close' })
+            })
+            if (res.ok) {
+                setSelectedRoom({ ...selectedRoom, status: 'CLOSED' })
+                setShowRatingModal(true)
+            }
+        } catch (error) {
+            console.error('Close error:', error)
+        } finally {
+            setClosingSession(false)
+        }
+    }
+
+    // Submit rating
+    const submitRating = async () => {
+        if (!selectedRoom || rating === 0 || submittingRating) return
+        setSubmittingRating(true)
+        try {
+            await fetch('/api/consultant-rating', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    roomId: selectedRoom.id,
+                    rating,
+                    comment: ratingComment.trim() || null
+                })
+            })
+            setShowRatingModal(false)
+            setRating(0)
+            setRatingComment('')
+        } catch (error) {
+            console.error('Rating error:', error)
+        } finally {
+            setSubmittingRating(false)
+        }
+    }
+
     if (status === 'loading' || loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
@@ -289,6 +343,20 @@ export default function KariyerDanismanligiPage() {
                             >
                                 <Phone className="w-5 h-5 text-white" />
                             </a>
+                        )}
+                        {selectedRoom && selectedRoom.status !== 'CLOSED' && (
+                            <button
+                                onClick={closeSession}
+                                disabled={closingSession}
+                                className="p-2 bg-red-600 hover:bg-red-500 rounded-lg transition disabled:opacity-50"
+                                title="Görüşmeyi Bitir"
+                            >
+                                {closingSession ? (
+                                    <Loader2 className="w-5 h-5 text-white animate-spin" />
+                                ) : (
+                                    <LogOut className="w-5 h-5 text-white" />
+                                )}
+                            </button>
                         )}
                     </div>
                 </header>
@@ -404,8 +472,8 @@ export default function KariyerDanismanligiPage() {
                                             >
                                                 <div
                                                     className={`max-w-[80%] md:max-w-[60%] rounded-2xl px-4 py-2 ${msg.senderType === 'USER'
-                                                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-br-md'
-                                                            : 'bg-slate-700 text-white rounded-bl-md'
+                                                        ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-br-md'
+                                                        : 'bg-slate-700 text-white rounded-bl-md'
                                                         }`}
                                                 >
                                                     <p className="whitespace-pre-wrap break-words">{msg.content}</p>
@@ -446,11 +514,80 @@ export default function KariyerDanismanligiPage() {
                                         </button>
                                     </div>
                                 </form>
+
+                                {/* Closed Session Notice */}
+                                {selectedRoom?.status === 'CLOSED' && (
+                                    <div className="p-4 bg-green-500/10 border-t border-slate-700">
+                                        <p className="text-green-400 text-sm text-center flex items-center justify-center gap-2">
+                                            <Check className="w-4 h-4" />
+                                            Bu görüşme tamamlanmış. Yeni mesaj gönderemezsiniz.
+                                        </p>
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Rating Modal */}
+            {showRatingModal && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 max-w-md w-full">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-white">Danışmanı Puanla</h3>
+                            <button onClick={() => setShowRatingModal(false)} className="p-1 hover:bg-slate-700 rounded-lg">
+                                <X className="w-5 h-5 text-slate-400" />
+                            </button>
+                        </div>
+                        <p className="text-slate-400 text-sm mb-4">
+                            {selectedRoom?.consultant.name} ile görüşmenizi nasıl değerlendirirsiniz?
+                        </p>
+                        {/* Stars */}
+                        <div className="flex justify-center gap-2 mb-4">
+                            {[1, 2, 3, 4, 5].map(star => (
+                                <button
+                                    key={star}
+                                    onClick={() => setRating(star)}
+                                    className="transition hover:scale-110"
+                                >
+                                    <Star
+                                        className={`w-8 h-8 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-600'}`}
+                                    />
+                                </button>
+                            ))}
+                        </div>
+                        {/* Comment */}
+                        <textarea
+                            value={ratingComment}
+                            onChange={e => setRatingComment(e.target.value)}
+                            placeholder="Yorumunuz (isteğe bağlı)..."
+                            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4 resize-none"
+                            rows={3}
+                        />
+                        {/* Submit */}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowRatingModal(false)}
+                                className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition"
+                            >
+                                Atla
+                            </button>
+                            <button
+                                onClick={submitRating}
+                                disabled={rating === 0 || submittingRating}
+                                className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl transition disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {submittingRating ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <>Gönder</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

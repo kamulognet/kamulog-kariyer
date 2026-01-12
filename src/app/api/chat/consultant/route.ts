@@ -197,6 +197,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Sohbet odası bulunamadı' }, { status: 404 })
         }
 
+        // Görüşme kapalı mı kontrol et
+        if (room.status === 'CLOSED') {
+            return NextResponse.json({ error: 'Bu görüşme kapatılmış, yeni mesaj gönderemezsiniz' }, { status: 400 })
+        }
+
         // Mesaj oluştur
         const message = await prisma.chatMessage.create({
             data: {
@@ -217,5 +222,54 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Chat POST error:', error)
         return NextResponse.json({ error: 'Mesaj gönderilemedi' }, { status: 500 })
+    }
+}
+
+// PATCH - Görüşmeyi kapat
+export async function PATCH(request: NextRequest) {
+    try {
+        const session = await getServerSession(authOptions)
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Oturum açmanız gerekiyor' }, { status: 401 })
+        }
+
+        const { roomId, action } = await request.json()
+
+        if (!roomId || action !== 'close') {
+            return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+        }
+
+        // Odanın bu kullanıcıya ait olduğunu veya admin olduğunu kontrol et
+        const room = await prisma.chatRoom.findFirst({
+            where: { id: roomId }
+        })
+
+        if (!room) {
+            return NextResponse.json({ error: 'Sohbet odası bulunamadı' }, { status: 404 })
+        }
+
+        // Sadece oda sahibi veya admin kapatabilir
+        if (room.userId !== session.user.id && session.user.role !== 'ADMIN') {
+            return NextResponse.json({ error: 'Bu görüşmeyi kapatma yetkiniz yok' }, { status: 403 })
+        }
+
+        if (room.status === 'CLOSED') {
+            return NextResponse.json({ error: 'Bu görüşme zaten kapatılmış' }, { status: 400 })
+        }
+
+        // Görüşmeyi kapat
+        const updatedRoom = await prisma.chatRoom.update({
+            where: { id: roomId },
+            data: {
+                status: 'CLOSED',
+                closedAt: new Date(),
+                closedBy: session.user.id
+            }
+        })
+
+        return NextResponse.json({ success: true, room: updatedRoom })
+    } catch (error) {
+        console.error('Chat PATCH error:', error)
+        return NextResponse.json({ error: 'Görüşme kapatılamadı' }, { status: 500 })
     }
 }

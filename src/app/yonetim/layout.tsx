@@ -26,12 +26,13 @@ import {
 
 const navItems = [
     { href: '/yonetim', label: 'Anasayfa', icon: LayoutDashboard, adminOnly: false },
-    { href: '/yonetim/users', label: 'Kullanıcılar', icon: Users, adminOnly: false }, // MODERATOR görür ama düzenleyemez
+    { href: '/yonetim/mesajlar', label: 'Mesajlarım', icon: MessageCircle, adminOnly: false, moderatorOnly: true },
+    { href: '/yonetim/users', label: 'Kullanıcılar', icon: Users, adminOnly: false },
     { href: '/yonetim/subscriptions', label: 'Abonelikler', icon: CreditCard, adminOnly: false },
     { href: '/yonetim/plans', label: 'Planlar & Jetonlar', icon: Coins, adminOnly: false },
     { href: '/yonetim/jobs', label: 'İş İlanları', icon: Briefcase, adminOnly: false },
     { href: '/yonetim/danismanlar', label: 'Kariyer Danışmanlığı', icon: Users, adminOnly: false },
-    { href: '/yonetim/danismanlar/mesajlar', label: '↳ Danışman Mesajları', icon: MessageCircle, adminOnly: false },
+    { href: '/yonetim/danismanlar/mesajlar', label: '↳ Danışman Mesajları', icon: MessageCircle, adminOnly: true },
     { href: '/yonetim/sales', label: 'Satış Kayıtları', icon: ShoppingCart, adminOnly: false },
     { href: '/yonetim/campaigns', label: 'Kampanyalar', icon: Tag, adminOnly: false },
     { href: '/yonetim/payment-settings', label: 'Ödeme Ayarları', icon: Wallet, adminOnly: true },
@@ -48,6 +49,7 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
     const router = useRouter()
     const pathname = usePathname()
     const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [unreadCount, setUnreadCount] = useState(0)
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -61,6 +63,26 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
     useEffect(() => {
         setSidebarOpen(false)
     }, [pathname])
+
+    // Fetch unread message count
+    useEffect(() => {
+        const fetchUnread = async () => {
+            try {
+                const res = await fetch('/api/chat/unread')
+                const data = await res.json()
+                if (data.unreadCount !== undefined) {
+                    setUnreadCount(data.unreadCount)
+                }
+            } catch (e) {
+                console.error('Unread fetch error:', e)
+            }
+        }
+        if (status === 'authenticated') {
+            fetchUnread()
+            const interval = setInterval(fetchUnread, 30000) // 30 saniyede bir
+            return () => clearInterval(interval)
+        }
+    }, [status])
 
     if (status === 'loading') {
         return (
@@ -79,7 +101,8 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
 
     // Filter nav items based on role
     const filteredNavItems = navItems.filter(item => {
-        if (isAdmin) return true // ADMIN sees everything
+        if (item.moderatorOnly && isAdmin) return false // Admin mesajlarım'ı görmez
+        if (isAdmin) return true // ADMIN sees everything else
         return !item.adminOnly // MODERATOR sees only non-admin items
     })
 
@@ -193,7 +216,19 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
+                        {/* Message Badge */}
+                        {unreadCount > 0 && (
+                            <Link
+                                href={isModerator ? '/yonetim/mesajlar' : '/yonetim/danismanlar/mesajlar'}
+                                className="relative p-2 hover:bg-white/10 rounded-lg transition"
+                            >
+                                <MessageCircle className="w-5 h-5 text-purple-400" />
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
+                            </Link>
+                        )}
                         <span className={`px-2 py-1 text-xs font-medium rounded-lg border ${isAdmin
                             ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-400 border-purple-500/30'
                             : 'bg-gradient-to-r from-green-500/20 to-teal-500/20 text-green-400 border-green-500/30'
