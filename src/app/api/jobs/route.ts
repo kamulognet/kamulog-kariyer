@@ -3,13 +3,36 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Benzersiz ilan kodu üretici
+function generateJobCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // O, 0, I, 1 karıştırılabilir karakterler çıkarıldı
+    let code = ''
+    for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return `JOB-${code}`
+}
+
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url)
         const type = searchParams.get('type') // PUBLIC, PRIVATE, ALL
+        const search = searchParams.get('search') // Arama terimi (başlık, şirket veya kod)
 
-        // ALL veya boş ise tümünü getir
-        const where = (type && type !== 'ALL') ? { type } : {}
+        // Arama ve tip filtreleri
+        const where: any = {}
+
+        if (type && type !== 'ALL') {
+            where.type = type
+        }
+
+        if (search) {
+            where.OR = [
+                { title: { contains: search, mode: 'insensitive' } },
+                { company: { contains: search, mode: 'insensitive' } },
+                { code: { contains: search.toUpperCase(), mode: 'insensitive' } }
+            ]
+        }
 
         const jobs = await prisma.jobListing.findMany({
             where,
@@ -57,8 +80,19 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
 
+        // Benzersiz kod üret
+        let code = generateJobCode()
+        let attempts = 0
+        while (attempts < 10) {
+            const existing = await prisma.jobListing.findUnique({ where: { code } })
+            if (!existing) break
+            code = generateJobCode()
+            attempts++
+        }
+
         // Veri temizleme - boş stringleri null yap, deadline'ı DateTime formatına çevir
         const jobData = {
+            code,
             title: body.title,
             company: body.company,
             location: body.location || null,
@@ -69,7 +103,7 @@ export async function POST(req: NextRequest) {
             applicationUrl: body.applicationUrl || null,
             salary: body.salary || null,
             deadline: body.deadline ? new Date(body.deadline) : null,
-            employerPhone: body.employerPhone || null, // İşveren telefonu (opsiyonel)
+            employerPhone: body.employerPhone || null,
         }
 
         const job = await prisma.jobListing.create({

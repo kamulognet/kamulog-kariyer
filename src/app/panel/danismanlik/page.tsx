@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
     MessageCircle,
@@ -66,9 +66,28 @@ export default function KariyerDanismanligiPage() {
     const [submittingRating, setSubmittingRating] = useState(false)
     const [closingSession, setClosingSession] = useState(false)
     const [restartingSession, setRestartingSession] = useState(false)
+    const [linkedJobInfo, setLinkedJobInfo] = useState<{ code: string, title: string, company: string, desc?: string } | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const messagesContainerRef = useRef<HTMLDivElement>(null)
     const pollingRef = useRef<NodeJS.Timeout | null>(null)
+    const searchParams = useSearchParams()
+
+    // URL'den gelen iş ilanı bilgilerini al
+    useEffect(() => {
+        const jobCode = searchParams.get('jobCode')
+        const jobTitle = searchParams.get('jobTitle')
+        const jobCompany = searchParams.get('jobCompany')
+        const jobDesc = searchParams.get('jobDesc')
+
+        if (jobCode && jobTitle && jobCompany) {
+            setLinkedJobInfo({
+                code: jobCode,
+                title: jobTitle,
+                company: jobCompany,
+                desc: jobDesc || undefined
+            })
+        }
+    }, [searchParams])
 
     // Scroll to bottom - container içinde scroll yap
     const scrollToBottom = () => {
@@ -488,6 +507,38 @@ export default function KariyerDanismanligiPage() {
                             </div>
                         ) : (
                             <>
+                                {/* İş İlanı Bilgi Kartı - Analiz sonrası gelenlere göster */}
+                                {linkedJobInfo && (
+                                    <div className="p-4 border-b border-slate-700 bg-gradient-to-r from-blue-900/30 to-slate-800/50">
+                                        <div className="flex items-start gap-3">
+                                            <div className="p-2 bg-blue-500/20 rounded-lg flex-shrink-0">
+                                                <Shield className="w-5 h-5 text-blue-400" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="px-2 py-0.5 text-xs font-mono font-bold rounded bg-slate-700 text-slate-300 border border-slate-600">
+                                                        {linkedJobInfo.code}
+                                                    </span>
+                                                    <h4 className="text-white font-medium truncate">{linkedJobInfo.title}</h4>
+                                                </div>
+                                                <p className="text-sm text-slate-400">{linkedJobInfo.company}</p>
+                                                {linkedJobInfo.desc && (
+                                                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">{linkedJobInfo.desc}</p>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={() => setLinkedJobInfo(null)}
+                                                className="p-1 hover:bg-slate-700 rounded transition"
+                                            >
+                                                <X className="w-4 h-4 text-slate-500" />
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-blue-400 mt-2">
+                                            💡 Bu ilan hakkında danışmanınıza soru sorabilirsiniz
+                                        </p>
+                                    </div>
+                                )}
+
                                 {/* Messages */}
                                 <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                                     {loadingMessages ? (

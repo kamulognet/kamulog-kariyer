@@ -26,14 +26,19 @@ export default function ChatWindow({
     onCVTitleChange
 }: ChatWindowProps) {
     const [input, setInput] = useState('')
-    const messagesEndRef = useRef<HTMLDivElement>(null)
+    const messagesContainerRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+        }
     }
 
     useEffect(() => {
         scrollToBottom()
+        // Scroll sonrası inputa focus ver
+        inputRef.current?.focus()
     }, [messages])
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -66,7 +71,7 @@ export default function ChatWindow({
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4">
                 {messages.length === 0 && (
                     <div className="text-center text-slate-400 py-8">
                         <div className="w-16 h-16 mx-auto mb-4 bg-blue-600/20 rounded-full flex items-center justify-center">
@@ -106,8 +111,6 @@ export default function ChatWindow({
                         </div>
                     </div>
                 )}
-
-                <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
@@ -142,6 +145,7 @@ export default function ChatWindow({
 
                 <div className="flex gap-3">
                     <input
+                        ref={inputRef}
                         type="text"
                         value={input}
                         onChange={handleInputChange}

@@ -12,6 +12,7 @@ import InsufficientCreditsModal from '@/components/InsufficientCreditsModal'
 
 interface JobListing {
     id: string
+    code: string
     title: string
     company: string
     location: string | null
@@ -419,7 +420,10 @@ export default function JobsPage() {
                             <div key={job.id} className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 border border-slate-700 hover:border-blue-500/50 transition group">
                                 <div className="flex flex-col md:flex-row justify-between gap-4">
                                     <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
+                                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                            <span className="px-2 py-0.5 text-xs font-mono font-bold rounded bg-slate-700 text-slate-300 border border-slate-600">
+                                                {job.code}
+                                            </span>
                                             <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition">{job.title}</h3>
                                             <span className={`px-2 py-0.5 text-xs font-medium rounded ${job.type === 'PUBLIC' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
                                                 }`}>

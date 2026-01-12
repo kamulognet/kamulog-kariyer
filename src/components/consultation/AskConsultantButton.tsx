@@ -8,6 +8,12 @@ import Link from 'next/link'
 interface AskConsultantButtonProps {
     className?: string
     context?: string // Hangi bağlamda kullanıldığı (job-analysis, job-match, etc.)
+    jobInfo?: {
+        code: string
+        title: string
+        company: string
+        description?: string
+    }
 }
 
 /**
@@ -16,7 +22,8 @@ interface AskConsultantButtonProps {
  */
 export default function AskConsultantButton({
     className = '',
-    context = 'general'
+    context = 'general',
+    jobInfo
 }: AskConsultantButtonProps) {
     const { data: session } = useSession()
     const [isPremium, setIsPremium] = useState(false)
@@ -45,6 +52,20 @@ export default function AskConsultantButton({
         checkPremium()
     }, [session])
 
+    // İş bilgisi içeren URL oluştur
+    const getConsultantUrl = () => {
+        if (jobInfo) {
+            const params = new URLSearchParams({
+                jobCode: jobInfo.code,
+                jobTitle: jobInfo.title,
+                jobCompany: jobInfo.company,
+                ...(jobInfo.description && { jobDesc: jobInfo.description.substring(0, 200) })
+            })
+            return `/panel/danismanlik?${params.toString()}`
+        }
+        return '/panel/danismanlik'
+    }
+
     if (loading) {
         return (
             <div className={`flex items-center gap-2 px-4 py-3 bg-slate-700/50 rounded-xl text-slate-400 animate-pulse ${className}`}>
@@ -58,7 +79,7 @@ export default function AskConsultantButton({
     if (isPremium) {
         return (
             <Link
-                href="/panel/danismanlik"
+                href={getConsultantUrl()}
                 className={`flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-medium rounded-xl transition shadow-lg shadow-purple-500/30 ${className}`}
             >
                 <Phone className="w-5 h-5" />
@@ -80,10 +101,20 @@ export default function AskConsultantButton({
     )
 }
 
+interface ConsultantPromoCardProps {
+    className?: string
+    jobInfo?: {
+        code: string
+        title: string
+        company: string
+        description?: string
+    }
+}
+
 /**
  * İş analizi sonucu altında gösterilen danışman kartı
  */
-export function ConsultantPromoCard({ className = '' }: { className?: string }) {
+export function ConsultantPromoCard({ className = '', jobInfo }: ConsultantPromoCardProps) {
     const { data: session } = useSession()
     const [isPremium, setIsPremium] = useState(false)
 
@@ -120,7 +151,7 @@ export function ConsultantPromoCard({ className = '' }: { className?: string }) 
                             : 'Premium üyelere özel kariyer danışmanlığı hizmetimizden yararlanın.'
                         }
                     </p>
-                    <AskConsultantButton />
+                    <AskConsultantButton jobInfo={jobInfo} />
                 </div>
             </div>
         </div>

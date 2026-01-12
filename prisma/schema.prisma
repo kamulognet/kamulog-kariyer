@@ -152,6 +152,7 @@ model ChatSession {
 
 model JobListing {
   id             String       @id @default(cuid())
+  code           String       @unique // Benzersiz ilan kodu: JOB-XXXXXX
   title          String
   company        String
   location       String?
@@ -166,6 +167,8 @@ model JobListing {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   analyses       CVAnalysis[]
+
+  @@index([code])
 }
 
 model CVAnalysis {
