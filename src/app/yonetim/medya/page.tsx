@@ -9,7 +9,11 @@ import {
     Loader2,
     X,
     Copy,
-    Check
+    Check,
+    Link as LinkIcon,
+    Edit3,
+    Eye,
+    EyeOff
 } from 'lucide-react'
 
 interface MediaCategory {
@@ -25,6 +29,8 @@ interface Media {
     url: string
     mimeType: string | null
     size: number | null
+    link?: string | null
+    isActive?: boolean
     createdAt: string
     category: { name: string } | null
 }
@@ -36,6 +42,9 @@ export default function MediaPage() {
     const [uploading, setUploading] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState<string>('')
     const [showCategoryModal, setShowCategoryModal] = useState(false)
+    const [showLinkModal, setShowLinkModal] = useState(false)
+    const [editingMedia, setEditingMedia] = useState<Media | null>(null)
+    const [mediaLink, setMediaLink] = useState('')
     const [newCategoryName, setNewCategoryName] = useState('')
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null)
 
@@ -147,6 +156,51 @@ export default function MediaPage() {
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
     }
 
+    const openLinkModal = (item: Media) => {
+        setEditingMedia(item)
+        setMediaLink(item.link || '')
+        setShowLinkModal(true)
+    }
+
+    const handleUpdateLink = async () => {
+        if (!editingMedia) return
+
+        try {
+            const res = await fetch('/api/admin/media', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    mediaId: editingMedia.id,
+                    link: mediaLink
+                })
+            })
+
+            if (res.ok) {
+                setShowLinkModal(false)
+                setEditingMedia(null)
+                loadMedia()
+            }
+        } catch (error) {
+            console.error('Link update error:', error)
+        }
+    }
+
+    const handleToggleActive = async (item: Media) => {
+        try {
+            await fetch('/api/admin/media', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    mediaId: item.id,
+                    isActive: !item.isActive
+                })
+            })
+            loadMedia()
+        } catch (error) {
+            console.error('Toggle active error:', error)
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -191,8 +245,8 @@ export default function MediaPage() {
                 <button
                     onClick={() => setSelectedCategory('')}
                     className={`px-4 py-2 rounded-lg font-medium transition ${!selectedCategory
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                         }`}
                 >
                     Tümü ({media.length})
@@ -202,8 +256,8 @@ export default function MediaPage() {
                         <button
                             onClick={() => setSelectedCategory(cat.id)}
                             className={`px-4 py-2 rounded-l-lg font-medium transition ${selectedCategory === cat.id
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                                 }`}
                         >
                             {cat.name} ({cat._count.media})
@@ -240,7 +294,25 @@ export default function MediaPage() {
                                 />
                             </div>
                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col justify-between p-3">
-                                <div className="flex justify-end gap-1">
+                                <div className="flex justify-end gap-1 flex-wrap">
+                                    <button
+                                        onClick={() => openLinkModal(item)}
+                                        className={`p-2 rounded-lg transition ${item.link ? 'bg-green-600 hover:bg-green-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+                                        title={item.link ? 'Link Düzenle: ' + item.link : 'Link Ekle'}
+                                    >
+                                        <LinkIcon className="w-4 h-4 text-white" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleToggleActive(item)}
+                                        className={`p-2 rounded-lg transition ${item.isActive !== false ? 'bg-blue-600 hover:bg-blue-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+                                        title={item.isActive !== false ? 'Aktif (Slider\'da görünür)' : 'Pasif (Slider\'da görünmez)'}
+                                    >
+                                        {item.isActive !== false ? (
+                                            <Eye className="w-4 h-4 text-white" />
+                                        ) : (
+                                            <EyeOff className="w-4 h-4 text-white" />
+                                        )}
+                                    </button>
                                     <button
                                         onClick={() => copyUrl(item.url)}
                                         className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition"
@@ -263,6 +335,9 @@ export default function MediaPage() {
                                 <div className="text-xs text-slate-300 truncate">
                                     {item.filename}
                                     <div className="text-slate-500">{formatSize(item.size)}</div>
+                                    {item.link && (
+                                        <div className="text-green-400 truncate">🔗 {item.link}</div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -295,6 +370,45 @@ export default function MediaPage() {
                                 className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition"
                             >
                                 Oluştur
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Link Editor Modal */}
+            {showLinkModal && editingMedia && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+                    <div className="bg-slate-800 rounded-xl w-full max-w-md p-6 border border-slate-700">
+                        <h2 className="text-xl font-bold text-white mb-2">Link Düzenle</h2>
+                        <p className="text-slate-400 text-sm mb-4">{editingMedia.filename}</p>
+                        <div className="mb-4">
+                            <label className="text-sm text-slate-400 mb-1 block">Tıklandığında yönlendirilecek URL</label>
+                            <input
+                                type="url"
+                                value={mediaLink}
+                                onChange={e => setMediaLink(e.target.value)}
+                                placeholder="https://example.com"
+                                className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                autoFocus
+                            />
+                            <p className="text-xs text-slate-500 mt-1">Boş bırakırsanız görsel tıklanamaz olur</p>
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowLinkModal(false)
+                                    setEditingMedia(null)
+                                }}
+                                className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={handleUpdateLink}
+                                className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition"
+                            >
+                                Kaydet
                             </button>
                         </div>
                     </div>

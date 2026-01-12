@@ -144,3 +144,40 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: 'Silme başarısız' }, { status: 500 })
     }
 }
+
+// PATCH - Medya bilgilerini güncelle (link, isActive)
+export async function PATCH(request: NextRequest) {
+    try {
+        const session = await getServerSession(authOptions)
+        if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR')) {
+            return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 })
+        }
+
+        const body = await request.json()
+        const { mediaId, link, isActive } = body
+
+        if (!mediaId) {
+            return NextResponse.json({ error: 'Media ID gerekli' }, { status: 400 })
+        }
+
+        const updateData: { link?: string | null; isActive?: boolean } = {}
+
+        if (link !== undefined) {
+            updateData.link = link || null
+        }
+
+        if (isActive !== undefined) {
+            updateData.isActive = isActive
+        }
+
+        const media = await prisma.media.update({
+            where: { id: mediaId },
+            data: updateData
+        })
+
+        return NextResponse.json({ success: true, media })
+    } catch (error) {
+        console.error('Media update error:', error)
+        return NextResponse.json({ error: 'Güncelleme başarısız' }, { status: 500 })
+    }
+}
