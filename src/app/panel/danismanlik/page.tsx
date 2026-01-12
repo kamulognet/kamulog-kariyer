@@ -395,6 +395,7 @@ export default function KariyerDanismanligiPage() {
                                 </button>
                             )}
                         </div>
+                    </div>
                 </header>
 
                 {/* Main Content */}
