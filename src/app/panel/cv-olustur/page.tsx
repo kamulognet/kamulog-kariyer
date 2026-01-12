@@ -278,7 +278,7 @@ export default function CVBuilderPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
             <PanelHeader />
 
             {/* Sub Header for page specific controls */}
@@ -334,16 +334,18 @@ export default function CVBuilderPage() {
                 </div>
             </div>
             {/* Main */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="flex-1 flex flex-col overflow-hidden">
                 {error && (
-                    <div className="mb-4 bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg">
-                        {error}
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+                        <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg">
+                            {error}
+                        </div>
                     </div>
                 )}
 
                 {/* Selection Step */}
                 {step === 'select' && (
-                    <div className="max-w-4xl mx-auto">
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                         <div className="text-center mb-12">
                             <h2 className="text-3xl font-bold text-white mb-4">CV&apos;nizi Nasıl Oluşturmak İstersiniz?</h2>
                             <p className="text-slate-400 text-lg">
@@ -452,7 +454,7 @@ export default function CVBuilderPage() {
                 )}
 
                 {step === 'chat' && (
-                    <div className="h-[calc(100vh-200px)]">
+                    <div className="flex-1 flex flex-col overflow-hidden max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4">
                         {/* Jeton Bakiyesi ve Session Limiti - Sınırsız değilse göster */}
                         {isUnlimited ? (
                             <div className="mb-4 p-4 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 rounded-xl">
@@ -522,21 +524,23 @@ export default function CVBuilderPage() {
                             </>
                         )}
 
-                        <ChatWindow
-                            messages={messages}
-                            onSendMessage={handleSendMessage}
-                            onGenerateCV={handleGenerateCV}
-                            isLoading={isLoading}
-                            remaining={remaining}
-                            showCVButton={isFinished}
-                            cvTitle={cvTitle}
-                            onCVTitleChange={setCvTitle}
-                        />
+                        <div className="flex-1 overflow-hidden">
+                            <ChatWindow
+                                messages={messages}
+                                onSendMessage={handleSendMessage}
+                                onGenerateCV={handleGenerateCV}
+                                isLoading={isLoading}
+                                remaining={remaining}
+                                showCVButton={isFinished}
+                                cvTitle={cvTitle}
+                                onCVTitleChange={setCvTitle}
+                            />
+                        </div>
                     </div>
                 )}
 
                 {step === 'preview' && cvData && (
-                    <div className="max-w-4xl mx-auto">
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                         <CVPreview data={cvData} />
                     </div>
                 )}
