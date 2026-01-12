@@ -108,6 +108,13 @@ export default function ModeratorMessagesPage() {
             const data = await res.json()
             if (data.room) {
                 setMessages(data.room.messages || [])
+                // Odanın status'unu da güncelle (CLOSED vs ACTIVE)
+                if (selectedRoom && selectedRoom.id === roomId) {
+                    setSelectedRoom({
+                        ...selectedRoom,
+                        status: data.room.status
+                    })
+                }
             }
         } catch (error) {
             console.error('Load messages error:', error)
