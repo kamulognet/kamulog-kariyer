@@ -206,7 +206,8 @@ export default function JobsPage() {
     const filteredJobs = jobs
         .filter(job =>
             (job.title.toLowerCase().includes(search.toLowerCase()) ||
-                job.company.toLowerCase().includes(search.toLowerCase())) &&
+                job.company.toLowerCase().includes(search.toLowerCase()) ||
+                (job.code && job.code.toLowerCase().includes(search.toLowerCase()))) &&
             (locationFilter === '' ||
                 job.location?.toLowerCase().includes(locationFilter.toLowerCase()) ||
                 job.location?.toLowerCase().includes('türkiye geneli'))

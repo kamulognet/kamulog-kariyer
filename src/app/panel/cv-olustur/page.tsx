@@ -271,14 +271,14 @@ export default function CVBuilderPage() {
 
     if (status === 'loading') {
         return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+            <div className="flex-1 bg-slate-900 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+        <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
             <PanelHeader />
 
             {/* Sub Header for page specific controls */}
