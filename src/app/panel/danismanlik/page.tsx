@@ -142,17 +142,21 @@ function KariyerDanismanligiContent() {
             if (res.ok && data.room) {
                 setSelectedRoom(data.room)
 
-                // Eğer linkedJobInfo varsa ve bu YENİ bir sohbetse, iş ilanı bilgisini otomatik mesaj olarak gönder
-                if (linkedJobInfo && data.isNewRoom) {
+                // Eğer linkedJobInfo varsa, iş ilanı bilgisini otomatik mesaj olarak gönder
+                // (URL'den gelen iş ilanı bilgisi her zaman danışmana iletilir)
+                if (linkedJobInfo) {
                     const jobInfoMessage = `📋 **İş İlanı Hakkında Danışmanlık İstiyorum**\n\n🏷️ İlan Kodu: ${linkedJobInfo.code}\n📌 Pozisyon: ${linkedJobInfo.title}\n🏢 Şirket: ${linkedJobInfo.company}${linkedJobInfo.desc ? `\n📝 Açıklama: ${linkedJobInfo.desc}` : ''}\n\nBu ilan hakkında bilgi almak istiyorum.`
 
                     // İş bilgisini mesaj olarak gönder
                     try {
-                        await fetch('/api/chat/consultant', {
+                        const sendRes = await fetch('/api/chat/consultant', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ roomId: data.room.id, content: jobInfoMessage })
                         })
+                        if (sendRes.ok) {
+                            console.log('Job info message sent successfully')
+                        }
                         // linkedJobInfo'yu temizle, tekrar gönderilmesin
                         setLinkedJobInfo(null)
                     } catch (e) {
