@@ -258,12 +258,12 @@ export default function JobAnalyzePage() {
                             {/* Kariyer Danışmanlığı Promo */}
                             <ConsultantPromoCard
                                 className="mt-4"
-                                jobInfo={job.code ? {
-                                    code: job.code,
+                                jobInfo={{
+                                    code: job.code || job.id.slice(-6).toUpperCase(),
                                     title: job.title,
                                     company: job.company,
                                     description: job.description
-                                } : undefined}
+                                }}
                             />
 
                             {/* Başvuru Butonu - Her zaman göster */}
