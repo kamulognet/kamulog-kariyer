@@ -183,33 +183,15 @@ export default function PanelHeader() {
                                 </div>
                             </Link>
 
-                            {/* Admin Badge */}
+                            {/* Admin/Moderator Badge */}
                             {(session.user.role === 'ADMIN' || session.user.role === 'MODERATOR') && (
-                                <>
-                                    {/* Moderatör için Mesajlaşma Butonu */}
-                                    {session.user.role === 'MODERATOR' && (
-                                        <Link
-                                            href="/yonetim/mesajlar"
-                                            className="relative flex items-center gap-1.5 px-2 py-1.5 bg-green-600 hover:bg-green-500 rounded-lg transition"
-                                            title="Danışan Mesajları"
-                                        >
-                                            <MessageCircle className="w-4 h-4 text-white" />
-                                            <span className="text-white text-xs font-medium hidden sm:inline">Mesajlar</span>
-                                            {moderatorUnread > 0 && (
-                                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
-                                                    {moderatorUnread > 9 ? '9+' : moderatorUnread}
-                                                </span>
-                                            )}
-                                        </Link>
-                                    )}
-                                    <Link
-                                        href="/yonetim"
-                                        className="p-1.5 text-purple-400 hover:bg-purple-500/10 rounded-lg transition"
-                                        title="Yönetim Paneli"
-                                    >
-                                        <Shield className="w-5 h-5" />
-                                    </Link>
-                                </>
+                                <Link
+                                    href="/yonetim"
+                                    className="p-1.5 text-purple-400 hover:bg-purple-500/10 rounded-lg transition"
+                                    title="Yönetim Paneli"
+                                >
+                                    <Shield className="w-5 h-5" />
+                                </Link>
                             )}
 
                             {/* Logout - Hidden on small mobile */}
@@ -325,25 +307,6 @@ export default function PanelHeader() {
                         </Link>
                     )}
                 </nav>
-
-                {/* Moderatör Mesajlaşma Linki */}
-                {session.user.role === 'MODERATOR' && (
-                    <div className="px-4 pb-2">
-                        <Link
-                            href="/yonetim/mesajlar"
-                            onClick={() => setMenuOpen(false)}
-                            className="relative flex items-center gap-3 px-4 py-3 rounded-xl bg-green-600/20 border border-green-500/30 text-green-400 hover:bg-green-600/30 transition"
-                        >
-                            <MessageCircle className="w-5 h-5" />
-                            <span className="font-medium">Danışan Mesajları</span>
-                            {moderatorUnread > 0 && (
-                                <span className="ml-auto w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                                    {moderatorUnread > 9 ? '9+' : moderatorUnread}
-                                </span>
-                            )}
-                        </Link>
-                    </div>
-                )}
 
                 {/* Admin Link */}
                 {(session.user.role === 'ADMIN' || session.user.role === 'MODERATOR') && (
