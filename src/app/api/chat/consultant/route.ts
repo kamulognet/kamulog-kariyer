@@ -239,17 +239,22 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
         }
 
-        // Odanın bu kullanıcıya ait olduğunu veya admin olduğunu kontrol et
+        // Odanın bu kullanıcıya ait olduğunu veya admin/moderatör olduğunu kontrol et
         const room = await prisma.chatRoom.findFirst({
-            where: { id: roomId }
+            where: { id: roomId },
+            include: { consultant: true }
         })
 
         if (!room) {
             return NextResponse.json({ error: 'Sohbet odası bulunamadı' }, { status: 404 })
         }
 
-        // Sadece oda sahibi veya admin kapatabilir
-        if (room.userId !== session.user.id && session.user.role !== 'ADMIN') {
+        // Oda sahibi, admin veya ilgili moderatör kapatabilir
+        const isOwner = room.userId === session.user.id
+        const isAdmin = session.user.role === 'ADMIN'
+        const isModerator = session.user.role === 'MODERATOR' && room.consultant?.userId === session.user.id
+
+        if (!isOwner && !isAdmin && !isModerator) {
             return NextResponse.json({ error: 'Bu görüşmeyi kapatma yetkiniz yok' }, { status: 403 })
         }
 

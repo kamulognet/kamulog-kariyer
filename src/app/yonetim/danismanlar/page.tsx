@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { Phone, MessageCircle, Plus, Save, Trash2, Edit2, User, Clock, Crown, X } from 'lucide-react'
+import { Phone, MessageCircle, Plus, Save, Trash2, Edit2, User, Clock, Crown, X, Star } from 'lucide-react'
 
 interface Consultant {
     id: string
@@ -13,6 +13,8 @@ interface Consultant {
     isActive: boolean
     createdAt: string
     userId?: string
+    averageRating?: number
+    ratingCount?: number
 }
 
 interface ModeratorUser {
@@ -47,12 +49,36 @@ export default function AdminConsultantsPage() {
             const res = await fetch('/api/admin/consultants')
             if (res.ok) {
                 const data = await res.json()
-                setConsultants(data.consultants || [])
+                const consultantList = data.consultants || []
+                setConsultants(consultantList)
+                loadRatings(consultantList) // Puanları yükle
             }
         } catch (e) {
             console.error('Error loading consultants:', e)
         }
         setLoading(false)
+    }
+
+    // Danışman puanlarını yükle
+    const loadRatings = async (consultantList: Consultant[]) => {
+        const ratingsPromises = consultantList.map(async (c) => {
+            try {
+                const res = await fetch(`/api/consultant-rating?consultantId=${c.id}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    return { id: c.id, average: data.average || 0, count: data.count || 0 }
+                }
+            } catch (e) {
+                // ignore
+            }
+            return { id: c.id, average: 0, count: 0 }
+        })
+
+        const ratings = await Promise.all(ratingsPromises)
+        setConsultants(prev => prev.map(c => {
+            const rating = ratings.find(r => r.id === c.id)
+            return { ...c, averageRating: rating?.average || 0, ratingCount: rating?.count || 0 }
+        }))
     }
 
     const loadModerators = async () => {
@@ -171,7 +197,7 @@ export default function AdminConsultantsPage() {
                         <tr>
                             <th className="text-left px-4 py-3 text-sm font-medium text-slate-400">Danışman</th>
                             <th className="text-left px-4 py-3 text-sm font-medium text-slate-400">Telefon</th>
-                            <th className="text-left px-4 py-3 text-sm font-medium text-slate-400">Unvan</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-slate-400">Puan</th>
                             <th className="text-left px-4 py-3 text-sm font-medium text-slate-400">Durum</th>
                             <th className="text-right px-4 py-3 text-sm font-medium text-slate-400">İşlemler</th>
                         </tr>
@@ -202,7 +228,15 @@ export default function AdminConsultantsPage() {
                                         {consultant.phone}
                                     </div>
                                 </td>
-                                <td className="px-4 py-3 text-slate-300">{consultant.title}</td>
+                                <td className="px-4 py-3">
+                                    <div className="flex items-center gap-1">
+                                        <Star className={`w-4 h-4 ${(consultant.averageRating || 0) > 0 ? 'text-yellow-400 fill-yellow-400' : 'text-slate-600'}`} />
+                                        <span className="text-white font-medium">
+                                            {(consultant.averageRating || 0).toFixed(1)}
+                                        </span>
+                                        <span className="text-slate-500 text-xs">({consultant.ratingCount || 0})</span>
+                                    </div>
+                                </td>
                                 <td className="px-4 py-3">
                                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${consultant.isActive
                                         ? 'bg-green-500/20 text-green-400'

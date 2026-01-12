@@ -64,11 +64,14 @@ export default function KariyerDanismanligiPage() {
     const [submittingRating, setSubmittingRating] = useState(false)
     const [closingSession, setClosingSession] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const messagesContainerRef = useRef<HTMLDivElement>(null)
     const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
-    // Scroll to bottom
+    // Scroll to bottom - container içinde scroll yap
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+        }
     }
 
     useEffect(() => {
@@ -452,7 +455,7 @@ export default function KariyerDanismanligiPage() {
                         ) : (
                             <>
                                 {/* Messages */}
-                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                                     {loadingMessages ? (
                                         <div className="flex items-center justify-center h-full">
                                             <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />

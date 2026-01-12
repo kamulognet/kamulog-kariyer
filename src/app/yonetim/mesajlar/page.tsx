@@ -12,7 +12,8 @@ import {
     Hash,
     CheckCircle,
     Clock,
-    Smile
+    Smile,
+    LogOut
 } from 'lucide-react'
 
 interface ChatRoom {
@@ -60,7 +61,9 @@ export default function ModeratorMessagesPage() {
     const [sending, setSending] = useState(false)
     const [loadingMessages, setLoadingMessages] = useState(false)
     const [showEmoji, setShowEmoji] = useState(false)
+    const [closingSession, setClosingSession] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const messagesContainerRef = useRef<HTMLDivElement>(null)
     const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
     const loadData = useCallback(async () => {
@@ -169,8 +172,33 @@ export default function ModeratorMessagesPage() {
     }
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        if (messagesContainerRef.current && messagesEndRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+        }
     }, [messages])
+
+    // Moderatör görüşmeyi kapatabilir
+    const closeSession = async () => {
+        if (!selectedRoom || closingSession) return
+        if (!confirm('Bu görüşmeyi kapatmak istediğinize emin misiniz?')) return
+
+        setClosingSession(true)
+        try {
+            const res = await fetch('/api/chat/consultant', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: selectedRoom.id, action: 'close' })
+            })
+            if (res.ok) {
+                setSelectedRoom({ ...selectedRoom, status: 'CLOSED' })
+                loadData() // Refresh room list
+            }
+        } catch (error) {
+            console.error('Close error:', error)
+        } finally {
+            setClosingSession(false)
+        }
+    }
 
     if (loading) {
         return (
@@ -313,12 +341,24 @@ export default function ModeratorMessagesPage() {
                                         </span>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => loadRoomMessages(selectedRoom.id)}
-                                    className="p-2 hover:bg-slate-700 rounded-lg transition"
-                                >
-                                    <RefreshCw className="w-4 h-4 text-slate-400" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => loadRoomMessages(selectedRoom.id)}
+                                        className="p-2 hover:bg-slate-700 rounded-lg transition"
+                                    >
+                                        <RefreshCw className="w-4 h-4 text-slate-400" />
+                                    </button>
+                                    {selectedRoom.status !== 'CLOSED' && (
+                                        <button
+                                            onClick={closeSession}
+                                            disabled={closingSession}
+                                            className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-sm rounded-lg transition disabled:opacity-50"
+                                        >
+                                            {closingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+                                            <span className="hidden sm:inline">Bitir</span>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             <p className="text-slate-400">Mesaj görüntülemek için görüşme seçin</p>
@@ -326,7 +366,7 @@ export default function ModeratorMessagesPage() {
                     </div>
 
                     {/* Messages Area */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
                         {loadingMessages ? (
                             <div className="flex items-center justify-center h-full">
                                 <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
@@ -348,8 +388,8 @@ export default function ModeratorMessagesPage() {
                                 >
                                     <div
                                         className={`max-w-[75%] rounded-xl px-4 py-2 ${msg.senderType === 'CONSULTANT'
-                                                ? 'bg-purple-600 text-white rounded-br-md'
-                                                : 'bg-slate-700 text-white rounded-bl-md'
+                                            ? 'bg-purple-600 text-white rounded-br-md'
+                                            : 'bg-slate-700 text-white rounded-bl-md'
                                             }`}
                                     >
                                         <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
