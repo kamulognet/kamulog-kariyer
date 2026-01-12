@@ -142,10 +142,22 @@ function KariyerDanismanligiContent() {
             if (res.ok && data.room) {
                 setSelectedRoom(data.room)
 
-                // Eğer linkedJobInfo varsa, iş ilanı bilgisini otomatik mesaj olarak gönder
-                // (URL'den gelen iş ilanı bilgisi her zaman danışmana iletilir)
-                if (linkedJobInfo) {
-                    const jobInfoMessage = `📋 **İş İlanı Hakkında Danışmanlık İstiyorum**\n\n🏷️ İlan Kodu: ${linkedJobInfo.code}\n📌 Pozisyon: ${linkedJobInfo.title}\n🏢 Şirket: ${linkedJobInfo.company}${linkedJobInfo.desc ? `\n📝 Açıklama: ${linkedJobInfo.desc}` : ''}\n\nBu ilan hakkında bilgi almak istiyorum.`
+                // URL'den iş ilanı bilgilerini doğrudan oku (state'e güvenmek yerine)
+                const jobCode = searchParams.get('jobCode')
+                const jobTitle = searchParams.get('jobTitle')
+                const jobCompany = searchParams.get('jobCompany')
+                const jobDesc = searchParams.get('jobDesc')
+
+                // Eğer URL'de iş ilanı bilgisi varsa, otomatik mesaj gönder
+                if (jobCode && jobTitle && jobCompany) {
+                    const jobInfoMessage = `📋 **İş İlanı Hakkında Danışmanlık İstiyorum**
+
+🏷️ İlan Kodu: ${jobCode}
+📌 Pozisyon: ${jobTitle}
+🏢 Şirket: ${jobCompany}${jobDesc ? `
+📝 Açıklama: ${jobDesc}` : ''}
+
+Bu ilan hakkında bilgi almak istiyorum.`
 
                     // İş bilgisini mesaj olarak gönder
                     try {
@@ -156,9 +168,12 @@ function KariyerDanismanligiContent() {
                         })
                         if (sendRes.ok) {
                             console.log('Job info message sent successfully')
+                            // linkedJobInfo'yu temizle
+                            setLinkedJobInfo(null)
+                        } else {
+                            const errData = await sendRes.json()
+                            console.error('Job info send failed:', errData.error)
                         }
-                        // linkedJobInfo'yu temizle, tekrar gönderilmesin
-                        setLinkedJobInfo(null)
                     } catch (e) {
                         console.error('Job info message send error:', e)
                     }
