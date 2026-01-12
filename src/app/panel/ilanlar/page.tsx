@@ -88,7 +88,8 @@ export default function JobsPage() {
 
     const loadSliderMedia = async () => {
         try {
-            const res = await fetch('/api/slider?category=slider')
+            // Tüm aktif medyaları getir
+            const res = await fetch('/api/slider')
             const data = await res.json()
             setSliderMedia(data.media || [])
         } catch (e) {
@@ -305,23 +306,27 @@ export default function JobsPage() {
                                         rel="noopener noreferrer"
                                         className="w-full flex-shrink-0 block"
                                     >
-                                        <div className="relative aspect-[4/1] w-full">
+                                        <div className="relative aspect-[3/1] md:aspect-[4/1] lg:aspect-[5/1] w-full">
                                             <Image
                                                 src={media.url}
                                                 alt={media.filename}
                                                 fill
                                                 className="object-cover"
+                                                sizes="100vw"
+                                                priority
                                             />
                                         </div>
                                     </a>
                                 ) : (
                                     <div key={media.id} className="w-full flex-shrink-0">
-                                        <div className="relative aspect-[4/1] w-full">
+                                        <div className="relative aspect-[3/1] md:aspect-[4/1] lg:aspect-[5/1] w-full">
                                             <Image
                                                 src={media.url}
                                                 alt={media.filename}
                                                 fill
                                                 className="object-cover"
+                                                sizes="100vw"
+                                                priority
                                             />
                                         </div>
                                     </div>
