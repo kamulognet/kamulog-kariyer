@@ -114,6 +114,7 @@ export async function GET(request: NextRequest) {
                 }
             })
 
+            let isNewRoom = false
             if (!room) {
                 room = await prisma.chatRoom.create({
                     data: {
@@ -124,9 +125,10 @@ export async function GET(request: NextRequest) {
                         consultant: { select: { id: true, name: true, title: true, avatarUrl: true, phone: true } }
                     }
                 })
+                isNewRoom = true
             }
 
-            return NextResponse.json({ room })
+            return NextResponse.json({ room, isNewRoom })
         }
 
         // Mesajları getir
