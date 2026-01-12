@@ -12,6 +12,13 @@ interface Consultant {
     description: string
     isActive: boolean
     createdAt: string
+    userId?: string
+}
+
+interface ModeratorUser {
+    id: string
+    name: string | null
+    email: string
 }
 
 export default function AdminConsultantsPage() {
@@ -25,11 +32,14 @@ export default function AdminConsultantsPage() {
         phone: '',
         title: '',
         description: '',
-        isActive: true
+        isActive: true,
+        userId: ''
     })
+    const [moderators, setModerators] = useState<ModeratorUser[]>([])
 
     useEffect(() => {
         loadConsultants()
+        loadModerators()
     }, [])
 
     const loadConsultants = async () => {
@@ -43,6 +53,18 @@ export default function AdminConsultantsPage() {
             console.error('Error loading consultants:', e)
         }
         setLoading(false)
+    }
+
+    const loadModerators = async () => {
+        try {
+            const res = await fetch('/api/admin/users?role=MODERATOR')
+            if (res.ok) {
+                const data = await res.json()
+                setModerators(data.users || [])
+            }
+        } catch (e) {
+            console.error('Error loading moderators:', e)
+        }
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -87,14 +109,15 @@ export default function AdminConsultantsPage() {
             phone: consultant.phone,
             title: consultant.title,
             description: consultant.description,
-            isActive: consultant.isActive
+            isActive: consultant.isActive,
+            userId: consultant.userId || ''
         })
         setEditingId(consultant.id)
         setShowModal(true)
     }
 
     const resetForm = () => {
-        setForm({ name: '', phone: '', title: '', description: '', isActive: true })
+        setForm({ name: '', phone: '', title: '', description: '', isActive: true, userId: '' })
         setEditingId(null)
     }
 
@@ -270,6 +293,22 @@ export default function AdminConsultantsPage() {
                                     className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white min-h-[80px]"
                                     placeholder="Danışman hakkında kısa bilgi..."
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-1">Moderatör Kullanıcı (Opsiyonel)</label>
+                                <select
+                                    value={form.userId}
+                                    onChange={e => setForm({ ...form, userId: e.target.value })}
+                                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                >
+                                    <option value="">Moderatör Seçiniz (Mesaj alabilmesi için)</option>
+                                    {moderators.map(mod => (
+                                        <option key={mod.id} value={mod.id}>
+                                            {mod.name || mod.email} - {mod.email}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-slate-500 mt-1">Bu danışmana gelen mesajları görmesi için bir moderatör bağlayın</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <input
