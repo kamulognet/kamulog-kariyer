@@ -17,7 +17,9 @@ import {
     CheckCheck,
     X,
     Star,
-    LogOut
+    LogOut,
+    Home,
+    Shield
 } from 'lucide-react'
 
 interface Consultant {
@@ -361,29 +363,38 @@ export default function KariyerDanismanligiPage() {
                                 </p>
                             </div>
                         </div>
-                        {selectedRoom?.consultant.phone && (
-                            <a
-                                href={`tel:${selectedRoom.consultant.phone}`}
-                                className="p-2 bg-green-600 hover:bg-green-500 rounded-lg transition"
+                        <div className="flex items-center gap-2">
+                            {/* Anasayfa butonu - her zaman görünür */}
+                            <Link
+                                href="/panel"
+                                className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition"
+                                title="Anasayfaya Dön"
                             >
-                                <Phone className="w-5 h-5 text-white" />
-                            </a>
-                        )}
-                        {selectedRoom && selectedRoom.status !== 'CLOSED' && (
-                            <button
-                                onClick={closeSession}
-                                disabled={closingSession}
-                                className="p-2 bg-red-600 hover:bg-red-500 rounded-lg transition disabled:opacity-50"
-                                title="Görüşmeyi Bitir"
-                            >
-                                {closingSession ? (
-                                    <Loader2 className="w-5 h-5 text-white animate-spin" />
-                                ) : (
-                                    <LogOut className="w-5 h-5 text-white" />
-                                )}
-                            </button>
-                        )}
-                    </div>
+                                <Home className="w-5 h-5 text-white" />
+                            </Link>
+                            {selectedRoom?.consultant.phone && (
+                                <a
+                                    href={`tel:${selectedRoom.consultant.phone}`}
+                                    className="p-2 bg-green-600 hover:bg-green-500 rounded-lg transition"
+                                >
+                                    <Phone className="w-5 h-5 text-white" />
+                                </a>
+                            )}
+                            {selectedRoom && selectedRoom.status !== 'CLOSED' && (
+                                <button
+                                    onClick={closeSession}
+                                    disabled={closingSession}
+                                    className="p-2 bg-red-600 hover:bg-red-500 rounded-lg transition disabled:opacity-50"
+                                    title="Görüşmeyi Bitir"
+                                >
+                                    {closingSession ? (
+                                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+                                    ) : (
+                                        <LogOut className="w-5 h-5 text-white" />
+                                    )}
+                                </button>
+                            )}
+                        </div>
                 </header>
 
                 {/* Main Content */}
@@ -493,8 +504,14 @@ export default function KariyerDanismanligiPage() {
                                         messages.map(msg => (
                                             <div
                                                 key={msg.id}
-                                                className={`flex ${msg.senderType === 'USER' ? 'justify-end' : 'justify-start'}`}
+                                                className={`flex items-end gap-2 ${msg.senderType === 'USER' ? 'justify-end' : 'justify-start'}`}
                                             >
+                                                {/* Danışman ikonu - consultant mesajlarında */}
+                                                {msg.senderType === 'CONSULTANT' && (
+                                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 mb-1">
+                                                        <Shield className="w-3.5 h-3.5 text-white" />
+                                                    </div>
+                                                )}
                                                 <div
                                                     className={`max-w-[80%] md:max-w-[60%] rounded-2xl px-4 py-2 ${msg.senderType === 'USER'
                                                         ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-br-md'

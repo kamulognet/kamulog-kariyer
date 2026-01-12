@@ -2,9 +2,10 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { Briefcase, MapPin, Building2, Search, Sparkles, Wand2, X, AlertCircle, CheckCircle2 } from 'lucide-react'
+import Image from 'next/image'
+import { Briefcase, MapPin, Building2, Search, Sparkles, Wand2, X, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react'
 import PanelHeader from '@/components/PanelHeader'
 import { useToast } from '@/components/ToastProvider'
 import InsufficientCreditsModal from '@/components/InsufficientCreditsModal'
@@ -35,6 +36,13 @@ interface CV {
     data?: string
 }
 
+interface SliderMedia {
+    id: string
+    url: string
+    filename: string
+    link?: string | null
+}
+
 export default function JobsPage() {
     const { data: session, status } = useSession()
     const router = useRouter()
@@ -53,6 +61,9 @@ export default function JobsPage() {
     const [selectedCV, setSelectedCV] = useState<string>('')
     const [notification, setNotification] = useState<{ show: boolean; type: 'info' | 'error' | 'success'; message: string }>({ show: false, type: 'info', message: '' })
     const [insufficientCredits, setInsufficientCredits] = useState<{ show: boolean; required: number; current: number }>({ show: false, required: 0, current: 0 })
+    const [sliderMedia, setSliderMedia] = useState<SliderMedia[]>([])
+    const [sliderIndex, setSliderIndex] = useState(0)
+    const sliderRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -63,7 +74,27 @@ export default function JobsPage() {
     useEffect(() => {
         loadJobs()
         loadUserCVs()
+        loadSliderMedia()
     }, [filter])
+
+    // Auto-scroll slider every 5 seconds
+    useEffect(() => {
+        if (sliderMedia.length <= 1) return
+        const interval = setInterval(() => {
+            setSliderIndex(prev => (prev + 1) % sliderMedia.length)
+        }, 5000)
+        return () => clearInterval(interval)
+    }, [sliderMedia.length])
+
+    const loadSliderMedia = async () => {
+        try {
+            const res = await fetch('/api/slider?category=slider')
+            const data = await res.json()
+            setSliderMedia(data.media || [])
+        } catch (e) {
+            console.log('Slider load error')
+        }
+    }
 
     const loadJobs = async () => {
         setLoading(true)
@@ -254,6 +285,74 @@ export default function JobsPage() {
                         >
                             CV Oluştur
                         </Link>
+                    </div>
+                )}
+
+                {/* Banner Slider */}
+                {sliderMedia.length > 0 && (
+                    <div className="relative mb-8 rounded-2xl overflow-hidden border border-slate-700">
+                        <div
+                            ref={sliderRef}
+                            className="flex transition-transform duration-500 ease-out"
+                            style={{ transform: `translateX(-${sliderIndex * 100}%)` }}
+                        >
+                            {sliderMedia.map((media) => (
+                                media.link ? (
+                                    <a
+                                        key={media.id}
+                                        href={media.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full flex-shrink-0 block"
+                                    >
+                                        <div className="relative aspect-[4/1] w-full">
+                                            <Image
+                                                src={media.url}
+                                                alt={media.filename}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                    </a>
+                                ) : (
+                                    <div key={media.id} className="w-full flex-shrink-0">
+                                        <div className="relative aspect-[4/1] w-full">
+                                            <Image
+                                                src={media.url}
+                                                alt={media.filename}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                    </div>
+                                )
+                            ))}
+                        </div>
+                        {sliderMedia.length > 1 && (
+                            <>
+                                <button
+                                    onClick={() => setSliderIndex(prev => prev === 0 ? sliderMedia.length - 1 : prev - 1)}
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition"
+                                >
+                                    <ChevronLeft className="w-6 h-6 text-white" />
+                                </button>
+                                <button
+                                    onClick={() => setSliderIndex(prev => (prev + 1) % sliderMedia.length)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition"
+                                >
+                                    <ChevronRight className="w-6 h-6 text-white" />
+                                </button>
+                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
+                                    {sliderMedia.map((_, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setSliderIndex(idx)}
+                                            className={`w-2 h-2 rounded-full transition ${idx === sliderIndex ? 'bg-white' : 'bg-white/50'}`}
+                                        />
+                                    ))}
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
 

@@ -286,11 +286,14 @@ model Media {
   mimeType   String?
   size       Int?
   categoryId String?
+  link       String? // Tıklandığında gidilecek link (opsiyonel)
+  isActive   Boolean        @default(true) // Slider'da gösterilsin mi
   createdAt  DateTime       @default(now())
   category   MediaCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([categoryId])
   @@index([createdAt])
+  @@index([isActive])
 }
 
 // WhatsApp mesaj logları - Gönderilen tüm mesajları takip eder
