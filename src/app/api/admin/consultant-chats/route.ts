@@ -50,6 +50,16 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ error: 'Sohbet bulunamadı' }, { status: 404 })
             }
 
+            // Kullanıcıdan gelen mesajları okundu olarak işaretle
+            await prisma.chatMessage.updateMany({
+                where: {
+                    roomId: roomId,
+                    senderType: 'USER',
+                    isRead: false
+                },
+                data: { isRead: true }
+            })
+
             return NextResponse.json({ room })
         }
 

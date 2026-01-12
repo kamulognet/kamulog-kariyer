@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// PATCH - Görüşmeyi kapat
+// PATCH - Görüşmeyi kapat veya yeniden başlat
 export async function PATCH(request: NextRequest) {
     try {
         const session = await getServerSession(authOptions)
@@ -235,7 +235,7 @@ export async function PATCH(request: NextRequest) {
 
         const { roomId, action } = await request.json()
 
-        if (!roomId || action !== 'close') {
+        if (!roomId || (action !== 'close' && action !== 'restart')) {
             return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
         }
 
@@ -249,32 +249,56 @@ export async function PATCH(request: NextRequest) {
             return NextResponse.json({ error: 'Sohbet odası bulunamadı' }, { status: 404 })
         }
 
-        // Oda sahibi, admin veya ilgili moderatör kapatabilir
+        // Oda sahibi, admin veya ilgili moderatör işlem yapabilir
         const isOwner = room.userId === session.user.id
         const isAdmin = session.user.role === 'ADMIN'
         const isModerator = session.user.role === 'MODERATOR' && room.consultant?.userId === session.user.id
 
         if (!isOwner && !isAdmin && !isModerator) {
-            return NextResponse.json({ error: 'Bu görüşmeyi kapatma yetkiniz yok' }, { status: 403 })
+            return NextResponse.json({ error: 'Bu işlem için yetkiniz yok' }, { status: 403 })
         }
 
-        if (room.status === 'CLOSED') {
-            return NextResponse.json({ error: 'Bu görüşme zaten kapatılmış' }, { status: 400 })
-        }
-
-        // Görüşmeyi kapat
-        const updatedRoom = await prisma.chatRoom.update({
-            where: { id: roomId },
-            data: {
-                status: 'CLOSED',
-                closedAt: new Date(),
-                closedBy: session.user.id
+        if (action === 'close') {
+            if (room.status === 'CLOSED') {
+                return NextResponse.json({ error: 'Bu görüşme zaten kapatılmış' }, { status: 400 })
             }
-        })
 
-        return NextResponse.json({ success: true, room: updatedRoom })
+            const updatedRoom = await prisma.chatRoom.update({
+                where: { id: roomId },
+                data: {
+                    status: 'CLOSED',
+                    closedAt: new Date(),
+                    closedBy: session.user.id
+                }
+            })
+
+            return NextResponse.json({ success: true, room: updatedRoom })
+        } else if (action === 'restart') {
+            // Sadece oda sahibi yeniden başlatabilir
+            if (!isOwner) {
+                return NextResponse.json({ error: 'Sadece kullanıcı sohbeti yeniden başlatabilir' }, { status: 403 })
+            }
+
+            if (room.status !== 'CLOSED') {
+                return NextResponse.json({ error: 'Sohbet zaten aktif' }, { status: 400 })
+            }
+
+            const updatedRoom = await prisma.chatRoom.update({
+                where: { id: roomId },
+                data: {
+                    status: 'ACTIVE',
+                    closedAt: null,
+                    closedBy: null
+                }
+            })
+
+            return NextResponse.json({ success: true, room: updatedRoom })
+        }
+
+        return NextResponse.json({ error: 'Geçersiz işlem' }, { status: 400 })
     } catch (error) {
         console.error('Chat PATCH error:', error)
-        return NextResponse.json({ error: 'Görüşme kapatılamadı' }, { status: 500 })
+        return NextResponse.json({ error: 'İşlem başarısız' }, { status: 500 })
     }
 }
+

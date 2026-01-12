@@ -84,7 +84,7 @@ export default function PanelHeader() {
         { href: '/panel/cv-olustur', label: 'CV Oluştur', icon: FileText },
         { href: '/panel/cvlerim', label: 'CV\'lerim', icon: FileText },
         { href: '/panel/ilanlar', label: 'İş İlanları', icon: Briefcase },
-        { href: '/panel/danismanlik', label: 'Kariyer Danışmanlığı', icon: Phone, isPremium: true },
+        { href: '/panel/danismanlik', label: 'Kariyer Danışmanlığı', icon: Phone, isPremium: true, moderatorExcluded: true },
         { href: '/panel/abonelik', label: 'Abonelik', icon: Crown },
         { href: '/panel/profil', label: 'Profil', icon: User },
     ]
@@ -126,10 +126,22 @@ export default function PanelHeader() {
                                     <Briefcase className="w-4 h-4" />
                                     İş İlanları
                                 </Link>
-                                <Link href="/panel/danismanlik" className="text-purple-400 hover:text-purple-300 transition text-sm font-medium flex items-center gap-1.5 bg-purple-500/10 px-2 py-1 rounded-lg border border-purple-500/30">
-                                    <Phone className="w-4 h-4" />
-                                    Kariyer Danışmanı
-                                </Link>
+                                {session.user.role === 'MODERATOR' ? (
+                                    <Link href="/yonetim/mesajlar" className="relative text-green-400 hover:text-green-300 transition text-sm font-medium flex items-center gap-1.5 bg-green-500/10 px-2 py-1 rounded-lg border border-green-500/30">
+                                        <MessageCircle className="w-4 h-4" />
+                                        Mesajlaşma
+                                        {moderatorUnread > 0 && (
+                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                                                {moderatorUnread > 9 ? '9+' : moderatorUnread}
+                                            </span>
+                                        )}
+                                    </Link>
+                                ) : (
+                                    <Link href="/panel/danismanlik" className="text-purple-400 hover:text-purple-300 transition text-sm font-medium flex items-center gap-1.5 bg-purple-500/10 px-2 py-1 rounded-lg border border-purple-500/30">
+                                        <Phone className="w-4 h-4" />
+                                        Kariyer Danışmanı
+                                    </Link>
+                                )}
                             </nav>
                         </div>
 
@@ -277,23 +289,41 @@ export default function PanelHeader() {
 
                 {/* Navigation Links */}
                 <nav className="p-4 space-y-2">
-                    {navItems.map((item) => {
-                        const Icon = item.icon
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                onClick={() => setMenuOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${item.isPremium
-                                    ? 'bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20'
-                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                                    }`}
-                            >
-                                <Icon className="w-5 h-5" />
-                                <span className="font-medium">{item.label}</span>
-                            </Link>
-                        )
-                    })}
+                    {navItems
+                        .filter(item => !(item.moderatorExcluded && session.user.role === 'MODERATOR'))
+                        .map((item) => {
+                            const Icon = item.icon
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    onClick={() => setMenuOpen(false)}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${item.isPremium
+                                        ? 'bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20'
+                                        : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                                        }`}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    <span className="font-medium">{item.label}</span>
+                                </Link>
+                            )
+                        })}
+                    {/* Moderatör için Mesajlaşma */}
+                    {session.user.role === 'MODERATOR' && (
+                        <Link
+                            href="/yonetim/mesajlar"
+                            onClick={() => setMenuOpen(false)}
+                            className="relative flex items-center gap-3 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20 transition"
+                        >
+                            <MessageCircle className="w-5 h-5" />
+                            <span className="font-medium">Mesajlaşma</span>
+                            {moderatorUnread > 0 && (
+                                <span className="ml-auto w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                                    {moderatorUnread > 9 ? '9+' : moderatorUnread}
+                                </span>
+                            )}
+                        </Link>
+                    )}
                 </nav>
 
                 {/* Moderatör Mesajlaşma Linki */}

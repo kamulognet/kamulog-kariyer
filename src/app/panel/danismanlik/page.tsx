@@ -63,6 +63,7 @@ export default function KariyerDanismanligiPage() {
     const [ratingComment, setRatingComment] = useState('')
     const [submittingRating, setSubmittingRating] = useState(false)
     const [closingSession, setClosingSession] = useState(false)
+    const [restartingSession, setRestartingSession] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const messagesContainerRef = useRef<HTMLDivElement>(null)
     const pollingRef = useRef<NodeJS.Timeout | null>(null)
@@ -230,6 +231,27 @@ export default function KariyerDanismanligiPage() {
             console.error('Close error:', error)
         } finally {
             setClosingSession(false)
+        }
+    }
+
+    // Restart session - Sohbeti yeniden başlat
+    const restartSession = async () => {
+        if (!selectedRoom || restartingSession) return
+        setRestartingSession(true)
+        try {
+            const res = await fetch('/api/chat/consultant', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: selectedRoom.id, action: 'restart' })
+            })
+            if (res.ok) {
+                setSelectedRoom({ ...selectedRoom, status: 'ACTIVE' })
+                loadData() // Refresh list
+            }
+        } catch (error) {
+            console.error('Restart error:', error)
+        } finally {
+            setRestartingSession(false)
         }
     }
 
@@ -518,13 +540,25 @@ export default function KariyerDanismanligiPage() {
                                     </div>
                                 </form>
 
-                                {/* Closed Session Notice */}
+                                {/* Closed Session - Restart Option */}
                                 {selectedRoom?.status === 'CLOSED' && (
-                                    <div className="p-4 bg-green-500/10 border-t border-slate-700">
+                                    <div className="p-4 bg-green-500/10 border-t border-slate-700 space-y-3">
                                         <p className="text-green-400 text-sm text-center flex items-center justify-center gap-2">
                                             <Check className="w-4 h-4" />
-                                            Bu görüşme tamamlanmış. Yeni mesaj gönderemezsiniz.
+                                            Bu görüşme tamamlanmış.
                                         </p>
+                                        <button
+                                            onClick={restartSession}
+                                            disabled={restartingSession}
+                                            className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            {restartingSession ? (
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                            ) : (
+                                                <MessageCircle className="w-5 h-5" />
+                                            )}
+                                            Yeni Sohbet Başlat
+                                        </button>
                                     </div>
                                 )}
                             </>

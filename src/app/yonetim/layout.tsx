@@ -31,7 +31,7 @@ const navItems = [
     { href: '/yonetim/subscriptions', label: 'Abonelikler', icon: CreditCard, adminOnly: false },
     { href: '/yonetim/plans', label: 'Planlar & Jetonlar', icon: Coins, adminOnly: false },
     { href: '/yonetim/jobs', label: 'İş İlanları', icon: Briefcase, adminOnly: false },
-    { href: '/yonetim/danismanlar', label: 'Kariyer Danışmanlığı', icon: Users, adminOnly: false },
+    { href: '/yonetim/danismanlar', label: 'Kariyer Danışmanlığı', icon: Users, adminOnly: true },
     { href: '/yonetim/danismanlar/mesajlar', label: '↳ Danışman Mesajları', icon: MessageCircle, adminOnly: true },
     { href: '/yonetim/sales', label: 'Satış Kayıtları', icon: ShoppingCart, adminOnly: false },
     { href: '/yonetim/campaigns', label: 'Kampanyalar', icon: Tag, adminOnly: false },
