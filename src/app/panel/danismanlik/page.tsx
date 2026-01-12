@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -48,7 +48,7 @@ interface ChatMessage {
     createdAt: string
 }
 
-export default function KariyerDanismanligiPage() {
+function KariyerDanismanligiContent() {
     const { data: session, status } = useSession()
     const router = useRouter()
     const [loading, setLoading] = useState(true)
@@ -695,5 +695,18 @@ export default function KariyerDanismanligiPage() {
                 </div>
             )}
         </div>
+    )
+}
+
+// Suspense wrapper for useSearchParams
+export default function KariyerDanismanligiPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+            </div>
+        }>
+            <KariyerDanismanligiContent />
+        </Suspense>
     )
 }
