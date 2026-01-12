@@ -217,18 +217,19 @@ export default function YonetimLayout({ children }: { children: React.ReactNode 
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {/* Message Badge */}
-                        {unreadCount > 0 && (
-                            <Link
-                                href={isModerator ? '/yonetim/mesajlar' : '/yonetim/danismanlar/mesajlar'}
-                                className="relative p-2 hover:bg-white/10 rounded-lg transition"
-                            >
-                                <MessageCircle className="w-5 h-5 text-purple-400" />
-                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        {/* MESAJLAŞMA Butonu - Her zaman görünür */}
+                        <Link
+                            href={isModerator ? '/yonetim/mesajlar' : '/yonetim/danismanlar/mesajlar'}
+                            className="relative flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 rounded-lg transition"
+                        >
+                            <MessageCircle className="w-4 h-4 text-white" />
+                            <span className="text-white text-sm font-medium hidden sm:inline">Mesajlaşma</span>
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
                                     {unreadCount > 9 ? '9+' : unreadCount}
                                 </span>
-                            </Link>
-                        )}
+                            )}
+                        </Link>
                         <span className={`px-2 py-1 text-xs font-medium rounded-lg border ${isAdmin
                             ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-400 border-purple-500/30'
                             : 'bg-gradient-to-r from-green-500/20 to-teal-500/20 text-green-400 border-green-500/30'
