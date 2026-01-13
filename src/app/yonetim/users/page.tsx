@@ -16,7 +16,9 @@ import {
     Crown,
     Shield,
     CheckCircle2,
-    XCircle
+    XCircle,
+    UserPlus,
+    ShieldCheck
 } from 'lucide-react'
 
 interface User {
@@ -71,6 +73,17 @@ export default function AdminUsersPage() {
     // Credit Modal
     const [creditModal, setCreditModal] = useState<{ user: User; type: 'add' | 'remove' } | null>(null)
     const [creditAmount, setCreditAmount] = useState(10)
+
+    // Create User Modal
+    const [showCreateModal, setShowCreateModal] = useState(false)
+    const [createForm, setCreateForm] = useState({
+        name: '',
+        email: '',
+        phoneNumber: '',
+        password: '',
+        verified: true
+    })
+    const [createLoading, setCreateLoading] = useState(false)
 
     useEffect(() => {
         loadUsers()
@@ -267,7 +280,7 @@ export default function AdminUsersPage() {
             const res = await fetch('/api/admin/users', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userIds: selectedUsers, credits: amount }) // existing PUT handles userIds check? I need to verify backend again but I think I added it. Yes I added it.
+                body: JSON.stringify({ userIds: selectedUsers, credits: amount })
             })
 
             if (res.ok) {
@@ -280,6 +293,66 @@ export default function AdminUsersPage() {
             setBulkActionLoading(false)
         }
     }
+
+    // Yeni kullanıcı oluştur
+    const handleCreateUser = async () => {
+        if (!createForm.email) {
+            alert('E-posta adresi zorunludur')
+            return
+        }
+
+        setCreateLoading(true)
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(createForm)
+            })
+
+            const data = await res.json()
+            if (res.ok) {
+                alert(data.message || 'Kullanıcı oluşturuldu')
+                setShowCreateModal(false)
+                setCreateForm({ name: '', email: '', phoneNumber: '', password: '', verified: true })
+                loadUsers()
+            } else {
+                alert(data.error || 'Hata oluştu')
+            }
+        } catch (error) {
+            console.error('Create user error:', error)
+            alert('Bir hata oluştu')
+        } finally {
+            setCreateLoading(false)
+        }
+    }
+
+    // Manuel doğrulama toggle
+    const handleToggleVerification = async (userId: string, currentlyVerified: boolean) => {
+        const action = currentlyVerified ? 'unverify' : 'verify'
+        const confirmMsg = currentlyVerified
+            ? 'Bu kullanıcının doğrulamasını kaldırmak istediğinize emin misiniz?'
+            : 'Bu kullanıcıyı manuel olarak doğrulamak istediğinize emin misiniz?'
+
+        if (!confirm(confirmMsg)) return
+
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, action })
+            })
+
+            const data = await res.json()
+            if (res.ok) {
+                loadUsers()
+            } else {
+                alert(data.error || 'İşlem başarısız')
+            }
+        } catch (error) {
+            console.error('Toggle verification error:', error)
+        }
+    }
+
 
     const planColors: Record<string, string> = {
         FREE: 'bg-slate-500/20 text-slate-400',
@@ -305,13 +378,22 @@ export default function AdminUsersPage() {
                         Toplam {pagination?.total || 0} kullanıcı
                     </p>
                 </div>
-                <button
-                    onClick={loadUsers}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
-                >
-                    <RefreshCw className="w-4 h-4" />
-                    Yenile
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowCreateModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition"
+                    >
+                        <UserPlus className="w-4 h-4" />
+                        Kullanıcı Ekle
+                    </button>
+                    <button
+                        onClick={loadUsers}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        Yenile
+                    </button>
+                </div>
             </div>
 
             {/* Search & Filters */}
@@ -477,17 +559,23 @@ export default function AdminUsersPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            {user.emailVerified ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 text-green-400 text-xs font-medium">
-                                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                                    Doğrulanmış
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-500/20 text-orange-400 text-xs font-medium">
-                                                    <XCircle className="w-3.5 h-3.5" />
-                                                    Bekliyor
-                                                </span>
-                                            )}
+                                            <button
+                                                onClick={() => handleToggleVerification(user.id, !!user.emailVerified)}
+                                                className="transition hover:scale-105"
+                                                title={user.emailVerified ? 'Doğrulamayı kaldır' : 'Manuel doğrula'}
+                                            >
+                                                {user.emailVerified ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 text-green-400 text-xs font-medium hover:bg-green-500/30">
+                                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                                        Doğrulanmış
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-500/20 text-orange-400 text-xs font-medium hover:bg-orange-500/30">
+                                                        <XCircle className="w-3.5 h-3.5" />
+                                                        Bekliyor
+                                                    </span>
+                                                )}
+                                            </button>
                                         </td>
                                         <td className="px-6 py-4 text-slate-300">
                                             {user.phoneNumber || '-'}
@@ -738,6 +826,96 @@ export default function AdminUsersPage() {
                     </div>
                 </div>
             )}
+            {/* Create User Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-slate-800 rounded-2xl w-full max-w-lg border border-slate-700">
+                        <div className="p-6 border-b border-slate-700">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                <UserPlus className="w-5 h-5 text-green-400" />
+                                Yeni Kullanıcı Oluştur
+                            </h2>
+                            <p className="text-slate-400 text-sm">Kullanıcı bilgilerini girin</p>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Ad Soyad</label>
+                                <input
+                                    type="text"
+                                    value={createForm.name}
+                                    onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                                    className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                    placeholder="Kullanıcı adı"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">E-posta *</label>
+                                <input
+                                    type="email"
+                                    value={createForm.email}
+                                    onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                                    className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                    placeholder="ornek@email.com"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Telefon</label>
+                                <input
+                                    type="tel"
+                                    value={createForm.phoneNumber}
+                                    onChange={(e) => setCreateForm({ ...createForm, phoneNumber: e.target.value })}
+                                    className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                    placeholder="+905XXXXXXXXX"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Şifre</label>
+                                <input
+                                    type="password"
+                                    value={createForm.password}
+                                    onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                                    className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                                    placeholder="Boş bırakılırsa varsayılan şifre atanır"
+                                />
+                                <p className="text-xs text-slate-500 mt-1">Varsayılan: Kamulog123!</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    id="verified"
+                                    checked={createForm.verified}
+                                    onChange={(e) => setCreateForm({ ...createForm, verified: e.target.checked })}
+                                    className="rounded border-slate-600 bg-slate-800 text-green-600 focus:ring-green-500"
+                                />
+                                <label htmlFor="verified" className="text-sm text-slate-300 flex items-center gap-2">
+                                    <ShieldCheck className="w-4 h-4 text-green-400" />
+                                    Hesabı doğrulanmış olarak oluştur
+                                </label>
+                            </div>
+                        </div>
+                        <div className="p-6 border-t border-slate-700 flex justify-end gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowCreateModal(false)
+                                    setCreateForm({ name: '', email: '', phoneNumber: '', password: '', verified: true })
+                                }}
+                                className="px-4 py-2 text-slate-400 hover:text-white transition"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={handleCreateUser}
+                                disabled={createLoading || !createForm.email}
+                                className="px-6 py-2 bg-green-600 hover:bg-green-500 disabled:bg-green-600/50 text-white rounded-lg font-medium transition"
+                            >
+                                {createLoading ? 'Oluşturuluyor...' : 'Kullanıcı Oluştur'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
+

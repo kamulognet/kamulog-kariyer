@@ -455,3 +455,151 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: 'Kullanıcı silinemedi' }, { status: 500 })
     }
 }
+
+// Yeni kullanıcı oluştur (Admin/Moderator)
+export async function POST(req: NextRequest) {
+    const session = await checkAdminOrModerator()
+    if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    try {
+        const { name, email, phoneNumber, password, verified } = await req.json()
+
+        if (!email) {
+            return NextResponse.json({ error: 'E-posta adresi zorunludur' }, { status: 400 })
+        }
+
+        // Email kontrolü
+        const existingUser = await prisma.user.findUnique({ where: { email } })
+        if (existingUser) {
+            return NextResponse.json({ error: 'Bu e-posta adresi zaten kullanımda' }, { status: 400 })
+        }
+
+        // Telefon kontrolü (opsiyonel)
+        if (phoneNumber) {
+            const existingPhone = await prisma.user.findFirst({ where: { phoneNumber } })
+            if (existingPhone) {
+                return NextResponse.json({ error: 'Bu telefon numarası zaten kullanımda' }, { status: 400 })
+            }
+        }
+
+        // Şifre hash'le
+        const bcrypt = await import('bcryptjs')
+        const hashedPassword = password
+            ? await bcrypt.hash(password, 12)
+            : await bcrypt.hash('Kamulog123!', 12) // Varsayılan şifre
+
+        // Kullanıcı oluştur
+        const newUser = await prisma.user.create({
+            data: {
+                name: name || null,
+                email,
+                phoneNumber: phoneNumber || null,
+                password: hashedPassword,
+                emailVerified: verified ? new Date() : null,
+                credits: 10, // FREE plan default
+                cvChatTokens: 20,
+                role: 'USER'
+            }
+        })
+
+        // Admin log
+        await prisma.adminLog.create({
+            data: {
+                adminId: session.user.id,
+                action: 'CREATE',
+                targetType: 'USER',
+                targetId: newUser.id,
+                details: JSON.stringify({
+                    email,
+                    name,
+                    phoneNumber,
+                    verified: !!verified,
+                    createdBy: session.user.email
+                }),
+            },
+        })
+
+        return NextResponse.json({
+            message: 'Kullanıcı başarıyla oluşturuldu',
+            user: { id: newUser.id, email: newUser.email, name: newUser.name }
+        })
+    } catch (error) {
+        console.error('Create user error:', error)
+        return NextResponse.json({ error: 'Kullanıcı oluşturulamadı' }, { status: 500 })
+    }
+}
+
+// Manuel doğrulama (Admin/Moderator)
+export async function PATCH(req: NextRequest) {
+    const session = await checkAdminOrModerator()
+    if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    try {
+        const { userId, action } = await req.json()
+
+        if (!userId) {
+            return NextResponse.json({ error: 'userId gerekli' }, { status: 400 })
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: userId } })
+        if (!user) {
+            return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 })
+        }
+
+        if (action === 'verify') {
+            // Manuel doğrulama
+            await prisma.user.update({
+                where: { id: userId },
+                data: { emailVerified: new Date() }
+            })
+
+            // Admin log
+            await prisma.adminLog.create({
+                data: {
+                    adminId: session.user.id,
+                    action: 'VERIFY',
+                    targetType: 'USER',
+                    targetId: userId,
+                    details: JSON.stringify({
+                        email: user.email,
+                        verifiedBy: session.user.email
+                    }),
+                },
+            })
+
+            return NextResponse.json({ message: 'Kullanıcı hesabı doğrulandı' })
+        } else if (action === 'unverify') {
+            // Doğrulamayı kaldır
+            await prisma.user.update({
+                where: { id: userId },
+                data: { emailVerified: null }
+            })
+
+            // Admin log
+            await prisma.adminLog.create({
+                data: {
+                    adminId: session.user.id,
+                    action: 'UNVERIFY',
+                    targetType: 'USER',
+                    targetId: userId,
+                    details: JSON.stringify({
+                        email: user.email,
+                        unverifiedBy: session.user.email
+                    }),
+                },
+            })
+
+            return NextResponse.json({ message: 'Kullanıcı doğrulaması kaldırıldı' })
+        }
+
+        return NextResponse.json({ error: 'Geçersiz işlem' }, { status: 400 })
+    } catch (error) {
+        console.error('Patch user error:', error)
+        return NextResponse.json({ error: 'İşlem başarısız' }, { status: 500 })
+    }
+}
+
