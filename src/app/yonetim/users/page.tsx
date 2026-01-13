@@ -50,6 +50,7 @@ export default function AdminUsersPage() {
     const [loading, setLoading] = useState(true)
     const [page, setPage] = useState(1)
     const [search, setSearch] = useState('')
+    const [verifiedFilter, setVerifiedFilter] = useState<'all' | 'verified' | 'unverified'>('all')
 
     // Bulk Actions
     const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -313,8 +314,8 @@ export default function AdminUsersPage() {
                 </button>
             </div>
 
-            {/* Search */}
-            <div className="flex gap-4">
+            {/* Search & Filters */}
+            <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                     <input
@@ -325,6 +326,28 @@ export default function AdminUsersPage() {
                         placeholder="İsim, email veya telefon ile ara..."
                         className="w-full pl-12 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => { setVerifiedFilter('all'); setPage(1); }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${verifiedFilter === 'all' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                    >
+                        Tümü
+                    </button>
+                    <button
+                        onClick={() => { setVerifiedFilter('verified'); setPage(1); }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${verifiedFilter === 'verified' ? 'bg-green-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                    >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Doğrulanmış
+                    </button>
+                    <button
+                        onClick={() => { setVerifiedFilter('unverified'); setPage(1); }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${verifiedFilter === 'unverified' ? 'bg-orange-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                    >
+                        <XCircle className="w-4 h-4" />
+                        Doğrulanmamış
+                    </button>
                 </div>
                 <button
                     onClick={handleSearch}
@@ -389,6 +412,12 @@ export default function AdminUsersPage() {
                                     />
                                 </th>
                                 <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">Kullanıcı</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-400">
+                                    <span className="flex items-center justify-center gap-1">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        Doğrulama
+                                    </span>
+                                </th>
                                 <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">Telefon</th>
                                 <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">Kredi</th>
                                 <th className="px-6 py-4 text-left text-sm font-medium text-slate-400">Plan</th>
@@ -401,18 +430,26 @@ export default function AdminUsersPage() {
                         <tbody className="divide-y divide-slate-700">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
+                                    <td colSpan={10} className="px-6 py-12 text-center text-slate-400">
                                         Yükleniyor...
                                     </td>
                                 </tr>
-                            ) : users.length === 0 ? (
+                            ) : users.filter(u => {
+                                if (verifiedFilter === 'verified') return u.emailVerified !== null
+                                if (verifiedFilter === 'unverified') return u.emailVerified === null
+                                return true
+                            }).length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
+                                    <td colSpan={10} className="px-6 py-12 text-center text-slate-400">
                                         Kullanıcı bulunamadı
                                     </td>
                                 </tr>
                             ) : (
-                                users.map((user) => (
+                                users.filter(u => {
+                                    if (verifiedFilter === 'verified') return u.emailVerified !== null
+                                    if (verifiedFilter === 'unverified') return u.emailVerified === null
+                                    return true
+                                }).map((user) => (
                                     <tr key={user.id} className={`hover:bg-slate-700/30 transition ${selectedUsers.includes(user.id) ? 'bg-slate-700/30' : ''}`}>
                                         <td className="px-6 py-4">
                                             <input
@@ -434,21 +471,23 @@ export default function AdminUsersPage() {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <p className="font-medium text-white">{user.name || '-'}</p>
-                                                        {user.emailVerified ? (
-                                                            <span title="Doğrulanmış Hesap">
-                                                                <CheckCircle2 className="w-4 h-4 text-green-400" />
-                                                            </span>
-                                                        ) : (
-                                                            <span title="Doğrulanmamış">
-                                                                <XCircle className="w-4 h-4 text-slate-500" />
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                    <p className="font-medium text-white">{user.name || '-'}</p>
                                                     <p className="text-sm text-slate-400">{user.email}</p>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            {user.emailVerified ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 text-green-400 text-xs font-medium">
+                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                    Doğrulanmış
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-500/20 text-orange-400 text-xs font-medium">
+                                                    <XCircle className="w-3.5 h-3.5" />
+                                                    Bekliyor
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-slate-300">
                                             {user.phoneNumber || '-'}
