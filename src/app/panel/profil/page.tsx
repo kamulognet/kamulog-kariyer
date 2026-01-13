@@ -45,6 +45,7 @@ export default function ProfilePage() {
     })
 
     const [emailChangeStep, setEmailChangeStep] = useState<'idle' | 'verify'>('idle')
+    const [maskedPhone, setMaskedPhone] = useState('')
 
     useEffect(() => {
         loadProfile()
@@ -152,7 +153,8 @@ export default function ProfilePage() {
             const data = await res.json()
             if (res.ok) {
                 setEmailChangeStep('verify')
-                setMessage({ type: 'success', text: 'Doğrulama kodu gönderildi. Lütfen konsolu kontrol edin (Simülasyon).' })
+                setMaskedPhone(data.maskedPhone || '')
+                setMessage({ type: 'success', text: 'Doğrulama kodu WhatsApp üzerinden gönderildi.' })
             } else {
                 setMessage({ type: 'error', text: data.error || 'Hata oluştu' })
             }
@@ -437,7 +439,7 @@ export default function ProfilePage() {
                                                 </div>
                                             ) : (
                                                 <div className="flex-1 max-w-sm space-y-2">
-                                                    <p className="text-xs text-blue-400">Doğrulama kodu {form.newEmail} adresine gönderildi.</p>
+                                                    <p className="text-xs text-green-400">📱 Doğrulama kodu {maskedPhone} numaralı telefonunuza WhatsApp üzerinden gönderildi.</p>
                                                     <input
                                                         type="text"
                                                         value={form.emailCode}
