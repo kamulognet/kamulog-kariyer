@@ -513,51 +513,7 @@ Bu ilan ve CV uyumluluğum hakkında danışmanlık almak istiyorum.`
                             </div>
                         </div>
 
-                        {/* Recent Chats */}
-                        <div className="flex-1 overflow-y-auto">
-                            <h2 className="px-4 pt-4 text-sm font-semibold text-purple-400 mb-3">Son Sohbetler</h2>
-                            {rooms.length === 0 ? (
-                                <p className="px-4 text-slate-500 text-sm">Henüz sohbet yok</p>
-                            ) : (
-                                <div className="space-y-1 px-2">
-                                    {rooms.map(room => (
-                                        <button
-                                            key={room.id}
-                                            onClick={() => {
-                                                setSelectedRoom(room)
-                                                loadMessages(room.id)
-                                            }}
-                                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition text-left ${selectedRoom?.id === room.id ? 'bg-purple-600/20' : 'hover:bg-slate-700/50'
-                                                }`}
-                                        >
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                                                {room.consultant.avatarUrl ? (
-                                                    <img src={room.consultant.avatarUrl} alt={room.consultant.name} className="w-full h-full rounded-full object-cover" />
-                                                ) : (
-                                                    <User className="w-5 h-5 text-white" />
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="text-white font-medium truncate">{room.consultant.name}</p>
-                                                    {room.lastMessage && (
-                                                        <span className="text-xs text-slate-500">{formatTime(room.lastMessage.createdAt)}</span>
-                                                    )}
-                                                </div>
-                                                <p className="text-slate-400 text-xs truncate">
-                                                    {room.lastMessage?.content || 'Sohbete başla...'}
-                                                </p>
-                                            </div>
-                                            {room.unreadCount > 0 && (
-                                                <span className="w-5 h-5 bg-purple-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                                                    {room.unreadCount}
-                                                </span>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+
                     </div>
 
                     {/* Chat Area */}
