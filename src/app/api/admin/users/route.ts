@@ -102,6 +102,7 @@ export async function GET(req: NextRequest) {
                     cvChatTokens: true,
                     role: true,
                     createdAt: true,
+                    emailVerified: true,
                     subscription: {
                         select: {
                             plan: true,

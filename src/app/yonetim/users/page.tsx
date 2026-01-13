@@ -14,7 +14,9 @@ import {
     RefreshCw,
     FileText,
     Crown,
-    Shield
+    Shield,
+    CheckCircle2,
+    XCircle
 } from 'lucide-react'
 
 interface User {
@@ -26,6 +28,7 @@ interface User {
     cvChatTokens?: number
     role: string
     createdAt: string
+    emailVerified: string | null
     subscription: { plan: string; status: string } | null
     _count: { cvs: number }
 }
@@ -431,7 +434,18 @@ export default function AdminUsersPage() {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className="font-medium text-white">{user.name || '-'}</p>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className="font-medium text-white">{user.name || '-'}</p>
+                                                        {user.emailVerified ? (
+                                                            <span title="Doğrulanmış Hesap">
+                                                                <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                                            </span>
+                                                        ) : (
+                                                            <span title="Doğrulanmamış">
+                                                                <XCircle className="w-4 h-4 text-slate-500" />
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-sm text-slate-400">{user.email}</p>
                                                 </div>
                                             </div>
